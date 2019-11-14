@@ -7,11 +7,15 @@ import gc
 import parabam
 import random
 
-import Queue as Queue2
+import queue as Queue2
 import numpy as np
 
 from parabam.core import DestroyPackage
-from itertools import izip
+try:
+    import itertools.izip as zip
+except ImportError:
+    pass
+
 from collections import Counter,namedtuple
 from multiprocessing import Queue,Process
 
@@ -421,7 +425,7 @@ class Handler(parabam.core.Handler):
                                      self._pending_jobs):
             
             pyramid_idle_counts[loner_type]=0
-            for idle_level,idle_path in izip(idle_levels,idle_paths):
+            for idle_level,idle_path in zip(idle_levels,idle_paths):
                 if not idle_success:
                     try:
                         self._loner_purgatory[loner_type].\

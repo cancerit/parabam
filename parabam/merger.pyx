@@ -7,10 +7,13 @@ import re
 import parabam
 import pysam
 
-import Queue as Queue2
+import queue as Queue2
 
 from collections import namedtuple
-from itertools import izip
+try:
+    import itertools.izip as zip
+except ImportError:
+    pass
 
 from pprint import pprint as ppr
 
@@ -172,7 +175,7 @@ class Handler(parabam.core.Handler):
         count = 0
 
         for (merge_count,merge_path),sequence_id in \
-                                            izip(merge_tuples,sequence_ids):
+                                            zip(merge_tuples,sequence_ids):
             if count > self._CLUMP_THRESH:
                 new_merge_tuple.append(self.__get_clump__(\
                                             current_clump.merge_tuples))

@@ -8,7 +8,6 @@ import os
 import copy
 import numpy as np
 
-from itertools import izip
 from multiprocessing import Queue
 from abc import ABCMeta, abstractmethod
 

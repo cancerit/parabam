@@ -2,7 +2,7 @@ import os
 import time
 import datetime
 import sys
-import Queue as Queue2
+import queue as Queue2
 import gc
 import shutil
 import argparse
@@ -11,8 +11,11 @@ import signal
 import traceback
 
 import pysam
+try:
+    import itertools.izip as zip
+except ImportError:
+    pass
 
-from itertools import izip
 from multiprocessing import Process,Queue,freeze_support
 from abc import ABCMeta, abstractmethod
 
@@ -608,11 +611,11 @@ class Leviathan(object):
             file_reader.join()
 
         #Inform handlers that processing has finished
-        for handler,queue in izip(handlers,handler_inqus):
+        for handler,queue in zip(handlers,handler_inqus):
             queue.put(EndProcPackage())
 
         #Destory handlers
-        for handler,queue in izip(handlers,handler_inqus):
+        for handler,queue in zip(handlers,handler_inqus):
             queue.put(DestroyPackage())
             handler.join()
 
@@ -663,7 +666,7 @@ class Leviathan(object):
                                      pause_qus):
         bundles = []
 
-        for proc_id,pause,task_n in izip(
+        for proc_id,pause,task_n in zip(
                                 self.__proc_id_generator__(constants.reader_n),
                                 pause_qus,
                                 task_n_list):

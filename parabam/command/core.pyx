@@ -4,15 +4,11 @@ import os
 import gc
 import shutil
 import gzip
+import imp
 
 import pysam
 import parabam
 
-import imp
-
-import Queue as Queue2
-
-from itertools import izip
 from multiprocessing import Queue,Process
 from abc import ABCMeta, abstractmethod
 

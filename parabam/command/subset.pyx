@@ -6,7 +6,6 @@ import os
 import gc
 import shutil
 
-from itertools import izip
 from multiprocessing import Queue
 
 class SubsetCore(object):
