@@ -218,7 +218,6 @@ class Subset(parabam.command.Interface):
 
         args = dict(locals())
         del args["self"]
-        print "parabam: ", args
         results = super(Subset,self).run(**args)
         return results
 
