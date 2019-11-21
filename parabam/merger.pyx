@@ -33,6 +33,7 @@ class Handler(parabam.core.Handler):
                                         out_qu_dict,report=False)
         
         self._subsets = list(constants.subsets)
+        self._parent_bam.filename = self._parent_bam.filename.decode('ascii')
 
         #CONSTANTS
         self._CLUMP_THRESH = 1000

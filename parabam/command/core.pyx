@@ -520,7 +520,9 @@ class Interface(parabam.core.Interface):
         self.__introduce__()
 
         const_args = self.__get_const_args__(**kwargs)
+        print "parabam - const_args", const_args
         constants = parabam.core.Constants(**const_args)
+        print "parabam - constants 1", constants.__dict__
 
         task_class = self.__get_task_class__(**kwargs)
         queue_names = self.__get_queue_names__(**kwargs)
@@ -539,6 +541,7 @@ class Interface(parabam.core.Interface):
 
         filereader_class = self.__get_filereader_class__(**kwargs)
 
+        print "parabam - constants 2", constants.__dict__
         leviathon = parabam.core.Leviathan(constants,handler_bundle,
                                            handler_order,queue_names,
                                            update_interval,task_class,
@@ -598,7 +601,7 @@ class Interface(parabam.core.Interface):
                 handler_bundle[handler_class]["out_qu_dict"].append("chaser")
         queue_names.append("chaser")
         handler_order.insert(0,parabam.chaser.Handler)
-        constants.total_procs = constants.total_procs / 2
+        constants.total_procs = int(constants.total_procs / 2)
 
     def default_parser(self):
         parser = super(Interface,self).default_parser()

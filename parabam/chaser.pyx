@@ -158,6 +158,7 @@ class Handler(parabam.core.Handler):
             print ""
 
     def __create_chaser_tasks__(self,total_tasks):
+        print "parabam - total_tasks: ", total_tasks
         tasks = []
         for i in xrange(total_tasks):
             task = ChaserTask(constants=self._constants,
