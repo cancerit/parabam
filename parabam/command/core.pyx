@@ -92,7 +92,7 @@ class PairTask(Task):
 
     def __process_task_set__(self,iterator):
         
-        next_read = iterator.next 
+        next_read = next(iterator) 
         query_loners = self.__query_loners__ 
         handle_output = self.__handle_rule_output__
 
@@ -107,7 +107,7 @@ class PairTask(Task):
 
         #StopIteration caught in parabam.core.Task.run
         for i in xrange(size):
-            read = next_read()
+            read = next_read
             read1,read2 = query_loners(read,loners)
 
             if read1:
