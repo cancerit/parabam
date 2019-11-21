@@ -255,7 +255,7 @@ class Task(Process):
     def __init__(self, parent_bam, inqu, outqu, statusqu, task_size, constants):
         super(Task,self).__init__()
         self._parent_bam = parent_bam
-        self._parent_path = self._parent_bam.filename
+        self._parent_path = self._parent_bam.filename.decode('ascii')
         self._header = self._parent_bam.header
 
         self._outqu = outqu
@@ -334,7 +334,7 @@ class Task(Process):
     def __get_temp_path__(self,identity):
         file_name = "%s_%d_%d_%s" %\
             (identity,self.pid,self._dealt, 
-             os.path.split(self._parent_bam.filename)[1])
+             os.path.split(self._parent_path)[1])
 
         return os.path.join(self._temp_dir,file_name)
 

@@ -85,7 +85,7 @@ class Handler(parabam.core.Handler):
             def __get_temp_path__(self,identity):
                 file_name = "%s_%d_%d_%s" %\
                     (identity,self.unique,self._dealt, os.path.split(\
-                                                self._parent_bam.filename)[1])
+                                                self._parent_bam.filename.decode('ascii'))[1])
                 return os.path.join(self._temp_dir,file_name)
 
         self._loner_pyramid = self.__instalise_loner_pyramid__()

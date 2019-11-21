@@ -106,14 +106,14 @@ class Handler(parabam.command.Handler):
             
             with open(self._output_paths["global"]["stats"],"a") as out_object:
                 out_object.write("%s%s\n" % \
-                    (self._parent_bam.filename,data_str))
+                    (self._parent_bam.filename.decode('ascii'),data_str))
         
         #Output non global data
         for name,structure in self._final_structures.items():
             if structure.struc_type == np.ndarray or \
                 structure.struc_type == dict:
                 structure.write_to_csv(\
-                    self._output_paths[self._parent_bam.filename][name])
+                    self._output_paths[self._parent_bam.filename.decode('ascii')][name])
 
     def __get_data_str_from_names__(self,names,structures):
         data_str = ""
