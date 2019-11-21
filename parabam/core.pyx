@@ -89,7 +89,6 @@ cdef class Handler:
         self._report = report
         self._stats = {}
         self._constants = constants
-        print "parabam - _constants.total_procs", self._constants.total_procs
         self._verbose = constants.verbose
         self._output_paths = output_paths
 
