@@ -40,7 +40,7 @@ class Task(parabam.core.Task):
 
     def __process_task_set__(self,iterator):
         user_rule = self._user_rule
-        next_read = iterator.next 
+        next_read = iterator.__next__
         parent_bam = self._parent_bam
         handle_output = self.__handle_rule_output__
         user_constants = self._user_constants
@@ -92,7 +92,7 @@ class PairTask(Task):
 
     def __process_task_set__(self,iterator):
         
-        next_read = next(iterator) 
+        next_read = iterator.__next__
         query_loners = self.__query_loners__ 
         handle_output = self.__handle_rule_output__
 
@@ -107,7 +107,7 @@ class PairTask(Task):
 
         #StopIteration caught in parabam.core.Task.run
         for i in xrange(size):
-            read = next_read
+            read = next_read()
             read1,read2 = query_loners(read,loners)
 
             if read1:
@@ -174,7 +174,7 @@ class ByCoordTask(Task):
 
     def __process_task_set__(self,iterator):
         user_rule = self._rule
-        next_read = iterator.next 
+        next_read = iterator.__next__
         parent_bam = self._parent_bam
 
         handle_output = self.__handle_rule_output__
@@ -320,7 +320,7 @@ class ByCoordFileReader(parabam.core.FileReader):
 
         one_ahead_bam = pysam.AlignmentFile(bam_file.filename,"rb")
         one_ahead_iter = one_ahead_bam.fetch(until_eof = True)
-        one_ahead_iter.next()
+        one_ahead_iter.__next__()
 
         while True:
             try:
@@ -330,9 +330,9 @@ class ByCoordFileReader(parabam.core.FileReader):
                 observed_positions = 0
                 while True:
 
-                    current_read_pos = parent_iter.next().pos
+                    current_read_pos = parent_iter.__next__.pos
                     try:
-                        one_ahead_pos = one_ahead_iter.next().pos                        
+                        one_ahead_pos = one_ahead_iter.__next__.pos                        
                     except StopIteration:
                         one_ahead_pos = -1
 

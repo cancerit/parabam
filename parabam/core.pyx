@@ -211,7 +211,7 @@ cdef class Handler:
 
     def __get_first_char__(self,iterations,update_interval):
         first_chars = ["-","+","*","+"]
-        return first_chars[(iterations/update_interval) % len(first_chars)]
+        return first_chars[int(iterations/update_interval) % len(first_chars)]
 
     #This code is a little ugly. Essentially, given a results
     #dictionary, it will go through and create a sensible output
@@ -255,7 +255,7 @@ class Task(Process):
     def __init__(self, parent_bam, inqu, outqu, statusqu, task_size, constants):
         super(Task,self).__init__()
         self._parent_bam = parent_bam
-        self._parent_path = self._parent_bam.filename.decode('ascii')
+        self._parent_path = self._parent_bam.filename.decode()
         self._header = self._parent_bam.header
 
         self._outqu = outqu
@@ -403,7 +403,6 @@ class FileReader(Process):
         wait_for_pause = self.__wait_for_pause__
         check_inqu = self.__check_inqu__
 
-
         if self._debug:
             parent_generator = self.__debug_generator__(parent_iter)
 
@@ -429,7 +428,6 @@ class FileReader(Process):
 
         for n in xrange(self._task_n+1):
             task_qu.put( (DestroyPackage(),-1) )
-
         time.sleep(2)
         parent_bam.close()
         task_qu.close()
@@ -470,7 +468,7 @@ class FileReader(Process):
                 if iterations % reader_n == proc_id:
                     yield iterations
                 for x in xrange(task_size):
-                    parent_iter.next()
+                    parent_iter.__next__()
                 iterations += 1
             except StopIteration:
                 break
@@ -487,7 +485,7 @@ class FileReader(Process):
                 if iterations % reader_n == proc_id:
                     yield iterations
                 for x in xrange(task_size):
-                    parent_iter.next()
+                    parent_iter.__next__()
                 iterations += 1
 
                 if iterations == 25:
@@ -586,7 +584,7 @@ class Leviathan(object):
                                                 default_qus,
                                                 parent,
                                                 output_paths,
-                                                pause_qus)                        
+                                                pause_qus)
         handlers = self.__get_handlers__(handlers_objects)
 
         task_n_list = self.__get_task_n__(self._constants,handlers)

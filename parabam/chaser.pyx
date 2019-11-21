@@ -83,9 +83,17 @@ class Handler(parabam.core.Handler):
                     handle_output(rule_output,pair)
 
             def __get_temp_path__(self,identity):
+                parent_bam_file_name = self._parent_bam.filename
+                try:
+                    parent_bam_file_name = parent_bam_file_name.decode()
+                    # prints for debugging
+                    print "parent_bam_file_name is in bytes."
+                except (UnicodeDecodeError, AttributeError):
+                    # prints for debugging
+                    print "parent_bam_file_name is not in bytes."
+                    pass
                 file_name = "%s_%d_%d_%s" %\
-                    (identity,self.unique,self._dealt, os.path.split(\
-                                                self._parent_bam.filename.decode('ascii'))[1])
+                    (identity,self.unique,self._dealt, os.path.split(parent_bam_file_name)[1])
                 return os.path.join(self._temp_dir,file_name)
 
         self._loner_pyramid = self.__instalise_loner_pyramid__()
