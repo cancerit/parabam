@@ -40,7 +40,7 @@ class Handler(parabam.core.Handler):
         self._EOF_SIGNATURE = '\x1F\x8B\x08\x04\x00\x00\x00\x00\x00\xFF'+\
                               '\x06\x00\x42\x43\x02\x00\x1B\x00\x03\x00'+\
                               '\x00\x00\x00\x00\x00\x00\x00\x00'
-        self._Clump = namedtuple("Clump","sequence_ids merge_tuples")                              
+        self._Clump = namedtuple("Clump","sequence_ids merge_tuples")
 
         #VARIABLES
 
@@ -280,6 +280,7 @@ class Handler(parabam.core.Handler):
             return ready_to_merge
 
     def __dump_to_BAM_file__(self,merge_path,subset):
+        print "merge path:", merge_path
         with open(merge_path,"rb") as merge_file:
             if self._subset_has_header[subset]:
                 merge_file.seek(self.__get_header_location__(merge_path))
@@ -288,7 +289,6 @@ class Handler(parabam.core.Handler):
 
             for binary_data in \
                 self.__get_binary_from_file__(merge_file):
-
                 self._out_file_objects[subset].write(binary_data)
                 self._out_file_objects[subset].flush()
         os.remove(merge_path)
@@ -297,18 +297,27 @@ class Handler(parabam.core.Handler):
         prev_data = ""
         i = 0
 
-        while True:
-            binary_data = open_file.read(2**19)
-            if not i == 0:
-                combined = prev_data+binary_data
-                if combined[len(combined)-28:] == self._EOF_SIGNATURE:
-                    yield combined[:len(combined)-28]
-                    return
-                else:
-                    yield prev_data
+        # while True:
+        #     binary_data = open_file.read(2**19)
+        #     if not i == 0:
+        #         combined = prev_data+binary_data
+        #         if combined[len(combined)-28:] == self._EOF_SIGNATURE:
+        #             yield combined[:len(combined)-28]
+        #             return
+        #         else:
+        #             yield prev_data
 
-            prev_data = binary_data
-            i += 1
+        #     prev_data = binary_data
+        #     i += 1
+        chunk_size = 2**19
+        while True:
+            binary_data = open_file.read(chunk_size)
+            if not binary_data:
+                return
+            if len(binary_data) < chunk_size:
+                yield binary_data
+                return
+            yield binary_data
 
     def __close_all_out_files__(self):
         for subset,file_obj in self._out_file_objects.items():

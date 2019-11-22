@@ -330,9 +330,9 @@ class ByCoordFileReader(parabam.core.FileReader):
                 observed_positions = 0
                 while True:
 
-                    current_read_pos = parent_iter.__next__.pos
+                    current_read_pos = parent_iter.__next__().pos
                     try:
-                        one_ahead_pos = one_ahead_iter.__next__.pos                        
+                        one_ahead_pos = one_ahead_iter.__next__().pos
                     except StopIteration:
                         one_ahead_pos = -1
 
@@ -547,6 +547,8 @@ class Interface(parabam.core.Interface):
         final_output_paths = self.__instalise_final_output__(**kwargs)
 
         for input_path in input_paths:
+            print "this is the big in, I think"
+            sys.stdout.flush()
             output_paths = self.__get_output_paths__(input_path,
                                                      final_output_paths,
                                                      **kwargs)
@@ -558,6 +560,8 @@ class Interface(parabam.core.Interface):
                 self.__report_file_names__(final_output_paths,input_path)
 
             leviathon.run(input_path,output_paths)
+            print "this is the big out, I think"
+            sys.stdout.flush()
 
         if not self.keep_in_temp:
             final_output_paths = self.__output_files_to_cwd__(final_output_paths)
