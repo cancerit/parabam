@@ -586,12 +586,13 @@ class Interface(parabam.core.Interface):
             return parabam.core.FileReader
 
     def __remove_empty_entries__(self,final_output_paths):
-        for master_path,child_paths in final_output_paths.items():
-            if len(child_paths) == 0:
+        master_paths = list(final_output_paths.keys())
+        for master_path in master_paths:
+            if len(final_output_paths[master_path]) == 0:
                 del final_output_paths[master_path]
 
     def __prepare_for_pair_processing__(self,handler_bundle,handler_order,
-                                            queue_names,constants,Task):        
+                                            queue_names,constants,Task):
         handler_bundle[parabam.chaser.Handler] = {"inqu":"chaser",
                                                   "constants":constants,
                                                   "out_qu_dict":["main"],

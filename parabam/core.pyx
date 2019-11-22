@@ -363,12 +363,7 @@ class FileReader(Process):
         
         super(FileReader,self).__init__()
 
-        try:
-            print "I feel there's only one place need to do this, input path is bytes"
-            self._input_path = input_path.decode()
-        except:
-            print "I feel there's only one place need to do this, input path is str as expected"
-            self._input_path = input_path
+        self._input_path = input_path
         self._proc_id = proc_id
         
         self._outqu = outqu
@@ -612,28 +607,14 @@ class Leviathan(object):
         for file_reader in file_readers:
             file_reader.join()
 
-        print "\nsee me 0"
-        sys.stdout.flush()
         #Inform handlers that processing has finished
         for handler,queue in zip(handlers,handler_inqus):
             queue.put(EndProcPackage())
-        print "\nsee me 1"
-        sys.stdout.flush()
 
         #Destory handlers
         for handler,queue in zip(handlers,handler_inqus):
-            print "\nsee me 2 - 1"
-            sys.stdout.flush()
             queue.put(DestroyPackage())
-            print "\nsee me 2 - 2"
-            sys.stdout.flush()
-            print str(handler)
-            sys.stdout.flush()
             handler.join()
-            print "\nsee me 2 - 3"
-            sys.stdout.flush()
-        print "\nsee me if I can get out from the loop"
-        sys.stdout.flush()
 
         del default_qus
         del file_reader_bundles
@@ -665,7 +646,7 @@ class Leviathan(object):
 
     def __get_file_readers__(self,file_reader_bundles):
         file_readers = []
-        for bundle in file_reader_bundles: 
+        for bundle in file_reader_bundles:
             file_reader = self._FileReaderClass(**bundle)
             file_readers.append(file_reader)
         return file_readers
@@ -687,7 +668,12 @@ class Leviathan(object):
                                 pause_qus,
                                 task_n_list):
 
-            current_bundle = {"input_path" :parent.filename,
+            try:
+                input_path = parent.filename.decode()
+            except:
+                print "I feel there's a line somewhere in the code, if we correct it we don't need to do this. Why input path is not bytes again?"
+                input_path = parent.filename
+            current_bundle = {"input_path" :input_path,
                               "proc_id" :proc_id,
                               "task_n" :task_n,
                               "outqu" :default_qus["main"],
@@ -722,7 +708,6 @@ class Leviathan(object):
             handler_args["inqu"] = queues[handler_args["inqu"]]
             handler_args["out_qu_dict"] = dict(\
                     [(name,queues[name]) for name in handler_args["out_qu_dict"] ])
-            print "handler_args:", handler_args
             handler_inqus.append(handler_args["inqu"])
             handlers.append(handler_class(**handler_args))
 

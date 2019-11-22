@@ -37,9 +37,7 @@ class Handler(parabam.core.Handler):
 
         #CONSTANTS
         self._CLUMP_THRESH = 1000
-        self._EOF_SIGNATURE = '\x1F\x8B\x08\x04\x00\x00\x00\x00\x00\xFF'+\
-                              '\x06\x00\x42\x43\x02\x00\x1B\x00\x03\x00'+\
-                              '\x00\x00\x00\x00\x00\x00\x00\x00'
+        self._EOF_SIGNATURE = b'\x1F\x8B\x08\x04\x00\x00\x00\x00\x00\xFF\x06\x00\x42\x43\x02\x00\x1B\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00'
         self._Clump = namedtuple("Clump","sequence_ids merge_tuples")
 
         #VARIABLES
@@ -76,7 +74,6 @@ class Handler(parabam.core.Handler):
         file_objects = {}
         output_paths = self._output_paths
 
-        file_objects = {}
         for subset in self._subsets:
             output_path = output_paths[self._parent_bam.filename][subset]
             file_objects[subset] = self.__get_bam_file_obj__(output_path)
@@ -84,7 +81,7 @@ class Handler(parabam.core.Handler):
         return file_objects
 
     def __get_bam_file_obj__(self,output_path):
-        return open(output_path,"wb")
+        return open(output_path, "wb")
 
     def __get_header_location__(self,header_path):
         header_bytes = pysam.view(*["-Hb",header_path])
@@ -280,7 +277,6 @@ class Handler(parabam.core.Handler):
             return ready_to_merge
 
     def __dump_to_BAM_file__(self,merge_path,subset):
-        print "merge path:", merge_path
         with open(merge_path,"rb") as merge_file:
             if self._subset_has_header[subset]:
                 merge_file.seek(self.__get_header_location__(merge_path))
@@ -320,7 +316,7 @@ class Handler(parabam.core.Handler):
             yield binary_data
 
     def __close_all_out_files__(self):
-        for subset,file_obj in self._out_file_objects.items():
+        for file_obj in self._out_file_objects.values():
             file_obj.write(self._EOF_SIGNATURE)
             file_obj.flush()
             file_obj.close()
