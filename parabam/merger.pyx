@@ -293,27 +293,22 @@ class Handler(parabam.core.Handler):
         prev_data = ""
         i = 0
 
-        # while True:
-        #     binary_data = open_file.read(2**19)
-        #     if not i == 0:
-        #         combined = prev_data+binary_data
-        #         if combined[len(combined)-28:] == self._EOF_SIGNATURE:
-        #             yield combined[:len(combined)-28]
-        #             return
-        #         else:
-        #             yield prev_data
-
-        #     prev_data = binary_data
-        #     i += 1
-        chunk_size = 2**19
+        print "in __get_binary_from_file__"
+        sys.stdout.flush()
         while True:
-            binary_data = open_file.read(chunk_size)
-            if not binary_data:
-                return
-            if len(binary_data) < chunk_size:
-                yield binary_data
-                return
-            yield binary_data
+            binary_data = open_file.read(2**19)
+            if not i == 0:
+                combined = prev_data+binary_data
+                if combined[len(combined)-28:] == self._EOF_SIGNATURE:
+                    yield combined[:len(combined)-28]
+                    print "__get_binary_from_file__ returns."
+                    sys.stdout.flush()
+                    return
+                else:
+                    yield prev_data
+
+            prev_data = binary_data
+            i += 1
 
     def __close_all_out_files__(self):
         for file_obj in self._out_file_objects.values():
