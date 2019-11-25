@@ -84,8 +84,13 @@ class Handler(parabam.core.Handler):
         return open(output_path, "wb")
 
     def __get_header_location__(self,header_path):
-        header_bytes = pysam.view(*["-Hb",header_path])
-        header_str = "".join(header_bytes).encode("hex")
+        header_bytes = pysam.view("-Hb", header_path)
+        # This is a temporary measure till we decide to migrate code to python3 completely
+        try:
+            # header_str = "".join(header_bytes).encode("hex")
+            header_str = header_bytes.encode("hex")
+        except AttributeError:
+            header_str = header_bytes.hex()
         return (len(header_str) / 2) - len(self._EOF_SIGNATURE)
 
     def __periodic_action__(self,iterations):
@@ -277,6 +282,7 @@ class Handler(parabam.core.Handler):
             return ready_to_merge
 
     def __dump_to_BAM_file__(self,merge_path,subset):
+        print "\nin __dump_to_BAM_file__"
         with open(merge_path,"rb") as merge_file:
             if self._subset_has_header[subset]:
                 merge_file.seek(self.__get_header_location__(merge_path))
@@ -288,12 +294,13 @@ class Handler(parabam.core.Handler):
                 self._out_file_objects[subset].write(binary_data)
                 self._out_file_objects[subset].flush()
         os.remove(merge_path)
+        print "\nout __dump_to_BAM_file__"
 
     def __get_binary_from_file__(self,open_file):
         prev_data = ""
         i = 0
 
-        print "in __get_binary_from_file__"
+        print "\nin __get_binary_from_file__"
         sys.stdout.flush()
         while True:
             binary_data = open_file.read(2**19)
@@ -301,7 +308,7 @@ class Handler(parabam.core.Handler):
                 combined = prev_data+binary_data
                 if combined[len(combined)-28:] == self._EOF_SIGNATURE:
                     yield combined[:len(combined)-28]
-                    print "__get_binary_from_file__ returns."
+                    print "\nout __get_binary_from_file__"
                     sys.stdout.flush()
                     return
                 else:
