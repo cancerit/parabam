@@ -697,7 +697,6 @@ class Leviathan(object):
         handler_inqus = []
 
         for handler_class in sequence_id:
-            print "handler_class:", str(handler_class)
             handler_args = dict(handler_bundle[handler_class])
             handler_args["parent_bam"] = parent_bam
             handler_args["output_paths"] = output_paths
