@@ -472,7 +472,6 @@ class Interface(parabam.core.Interface):
             args["system_subsets"] = ["chaser"]
         else:
             args["system_subsets"] = []
-
         return args
 
     def __update_final_output_paths__(self,
@@ -480,14 +479,14 @@ class Interface(parabam.core.Interface):
                                        output_paths,
                                        final_output_paths):
         final_output_paths.update(output_paths)
-    
-    def __output_files_to_cwd__(self,final_output_paths):
+
+    def __output_files_to_a_dir__(self,final_output_paths, out_dir):
         revised_output_paths = {}
         for input_path, analyses in final_output_paths.items():
             revised_output_paths[input_path] = {}
             for analysis_name, analysis_path in analyses.items():
                 head,tail = os.path.split(analysis_path)
-                new_path = os.path.abspath(os.path.join(".",tail))
+                new_path = os.path.abspath(os.path.join(out_dir,tail))
 
                 real_path = self.__move_output_file__(analysis_path,new_path)
                 revised_output_paths[input_path][analysis_name] = real_path
@@ -547,8 +546,6 @@ class Interface(parabam.core.Interface):
         final_output_paths = self.__instalise_final_output__(**kwargs)
 
         for input_path in input_paths:
-            print "this is the big in, I think"
-            sys.stdout.flush()
             output_paths = self.__get_output_paths__(input_path,
                                                      final_output_paths,
                                                      **kwargs)
@@ -560,12 +557,14 @@ class Interface(parabam.core.Interface):
                 self.__report_file_names__(final_output_paths,input_path)
 
             leviathon.run(input_path,output_paths)
-            print "this is the big out, I think"
-            sys.stdout.flush()
 
         if not self.keep_in_temp:
-            final_output_paths = self.__output_files_to_cwd__(final_output_paths)
-        
+            outbam_dir = const_args.get('outbam_dir')
+            if not outbam_dir:
+                sys.stderr.write("WARNING: keep_in_temp is False, but no valid output dir is given, using current working directory. Our code should stop this happening.\n")
+                outbam_dir = '.'
+            final_output_paths = self.__output_files_to_a_dir__(final_output_paths, outbam_dir)
+
         self.__remove_empty_entries__(final_output_paths)
 
         self.__goodbye__()

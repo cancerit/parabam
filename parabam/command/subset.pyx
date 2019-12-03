@@ -218,7 +218,8 @@ class Subset(parabam.command.Interface):
 
         args = dict(locals())
         del args["self"]
-        results = super(Subset,self).run(**args)
+        del args['kwargs']
+        results = super(Subset,self).run(**args, **kwargs)
         return results
 
     def __get_queue_names__(self,**kwargs):
