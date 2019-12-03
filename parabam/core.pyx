@@ -24,7 +24,7 @@ class CmdLineInterface(object):
         self.program_name = program_name
 
     def keyboard_handler(self,sig, frame):#Catch keyboard interupt and end processors
-        sys.stdout.write("\r[ERROR] %s interrupted by user" \
+        sys.stdout.write("\r[ERROR] %s interrupted by user\n" \
                                          % (self.program_name))
         sys.exit(0)
 
