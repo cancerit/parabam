@@ -742,38 +742,36 @@ class Interface(object):
         self.header_line = "-" * 77
 
         self.cmd_run = cmd_run
+        if cmd_run == False and temp_dir is None:
+            sys.stdout.write("***\nWarning: this is not expected, when cmd_run is False, "
+             "temp_dir should not be None. Programme may not break but not sure "
+             "if it still produces expected results.\n***\n")
+        self.control_temp_dir = False
+
         if cmd_run:
             self.__cmd_args_to_class_vars__()
+            self.__temp_dir_instalise__()
 
         else:
             self.task_size = task_size
             self.total_procs = total_procs
             self.reader_n = reader_n
             self.verbose = verbose
+            self.temp_dir = temp_dir
             self.keep_in_temp = keep_in_temp
             if not verbose:
                 self.announce = False
             else:
                 self.announce = announce
 
-        self.temp_dir = temp_dir
-        self.__temp_dir_instalise__()
-
     def get_temp_dir_path(self):
         return self.temp_dir
 
     def __temp_dir_instalise__(self):
-        if self.temp_dir is None:
-            self.temp_dir = self.__get_unique_tempdir__()
-            self.control_temp_dir = True
-        else:
-            self.temp_dir = self.temp_dir
-            self.control_temp_dir = False
-
-    def __get_unique_tempdir__(self):
+        self.control_temp_dir = True
         sanitised_name = self.instance_name.replace(" ","_")
         prefix = "%s-" % (sanitised_name,)
-        return tempfile.mkdtemp(prefix=prefix,dir=".")
+        self.temp_dir = tempfile.mkdtemp(prefix=prefix, dir=self.temp_dir)
 
     def __cmd_args_to_class_vars__(self):
         parser = self.get_parser()
@@ -782,6 +780,7 @@ class Interface(object):
         self.task_size = cmd_args.s
         self.total_procs = cmd_args.p
         self.verbose = cmd_args.v
+        self.temp_dir = cmd_args.temp_dir
         self.reader_n = cmd_args.f
     
         self.keep_in_temp = False
@@ -845,7 +844,9 @@ class Interface(object):
                  "\t0: No output [Default]\n"
                  "\t1: Total Reads Processed\n"
                  "\t2: Detailed output"))
-        
+        parser.add_argument('--temp_dir',type=str, metavar='DIR',default='/tmp'
+            ,help=('Path for %s to use for intermediate files [Default: /tmp].') % self.instance_name)
+
         return parser
 
     @abstractmethod
