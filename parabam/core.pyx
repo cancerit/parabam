@@ -2,7 +2,7 @@ import os
 import time
 import datetime
 import sys
-import Queue as Queue2
+import queue as Queue2
 import gc
 import shutil
 import argparse
@@ -11,8 +11,11 @@ import signal
 import traceback
 
 import pysam
+try:
+    import itertools.izip as zip
+except ImportError:
+    pass
 
-from itertools import izip
 from multiprocessing import Process,Queue,freeze_support
 from abc import ABCMeta, abstractmethod
 
@@ -21,7 +24,7 @@ class CmdLineInterface(object):
         self.program_name = program_name
 
     def keyboard_handler(self,sig, frame):#Catch keyboard interupt and end processors
-        sys.stdout.write("\r[ERROR] %s interrupted by user" \
+        sys.stdout.write("\r[ERROR] %s interrupted by user\n" \
                                          % (self.program_name))
         sys.exit(0)
 
@@ -85,7 +88,6 @@ cdef class Handler:
 
         self._report = report
         self._stats = {}
-
         self._constants = constants
         self._verbose = constants.verbose
         self._output_paths = output_paths
@@ -209,7 +211,7 @@ cdef class Handler:
 
     def __get_first_char__(self,iterations,update_interval):
         first_chars = ["-","+","*","+"]
-        return first_chars[(iterations/update_interval) % len(first_chars)]
+        return first_chars[int(iterations/update_interval) % len(first_chars)]
 
     #This code is a little ugly. Essentially, given a results
     #dictionary, it will go through and create a sensible output
@@ -253,7 +255,7 @@ class Task(Process):
     def __init__(self, parent_bam, inqu, outqu, statusqu, task_size, constants):
         super(Task,self).__init__()
         self._parent_bam = parent_bam
-        self._parent_path = self._parent_bam.filename
+        self._parent_path = self._parent_bam.filename.decode()
         self._header = self._parent_bam.header
 
         self._outqu = outqu
@@ -292,7 +294,6 @@ class Task(Process):
                 time.sleep(0.005)
 
                 self._outqu.put(Package(results=results,sequence_id=sequence_id))
-                #tell filereader a batch of five jobs
                 self._statusqu.put(1) 
 
             except Queue2.Empty:
@@ -333,7 +334,7 @@ class Task(Process):
     def __get_temp_path__(self,identity):
         file_name = "%s_%d_%d_%s" %\
             (identity,self.pid,self._dealt, 
-             os.path.split(self._parent_bam.filename)[1])
+             os.path.split(self._parent_path)[1])
 
         return os.path.join(self._temp_dir,file_name)
 
@@ -385,6 +386,12 @@ class FileReader(Process):
         self._active_jobs_thresh = ((self._task_n * 50) *\
                                         ((1000/self._task_size)+1))
 
+        self._pause_debug = (lambda x: False)
+        #self._pause_debug = self.__pause_debug__
+
+    def __pause_debug__(self, message):
+        print "PAUSE DEBUG:: ", message
+
     #Find data pertaining to assocd and all reads 
     #and divide pertaining to the chromosome that it is aligned to
     def run(self):
@@ -395,7 +402,6 @@ class FileReader(Process):
         parent_generator = self.__bam_generator__(parent_iter)
         wait_for_pause = self.__wait_for_pause__
         check_inqu = self.__check_inqu__
-
 
         if self._debug:
             parent_generator = self.__debug_generator__(parent_iter)
@@ -422,7 +428,6 @@ class FileReader(Process):
 
         for n in xrange(self._task_n+1):
             task_qu.put( (DestroyPackage(),-1) )
-
         time.sleep(2)
         parent_bam.close()
         task_qu.close()
@@ -463,7 +468,7 @@ class FileReader(Process):
                 if iterations % reader_n == proc_id:
                     yield iterations
                 for x in xrange(task_size):
-                    parent_iter.next()
+                    parent_iter.__next__()
                 iterations += 1
             except StopIteration:
                 break
@@ -480,7 +485,7 @@ class FileReader(Process):
                 if iterations % reader_n == proc_id:
                     yield iterations
                 for x in xrange(task_size):
-                    parent_iter.next()
+                    parent_iter.__next__()
                 iterations += 1
 
                 if iterations == 25:
@@ -492,33 +497,65 @@ class FileReader(Process):
 
     def __send_ack__(self,qu):
         qu.put(2)
-        time.sleep(1)
+        self._pause_debug("FileReader:%d || ACK SENT" \
+                                             % (self._proc_id,))
+        time.sleep(3)
 
     def __wait_for_pause__(self):
         try: #pre clause for speed
-            pause = self._pause_qu.get(False)
+            pause_signal = self._pause_qu.get(False)
         except Queue2.Empty:
             return
 
         pause_qu = self._pause_qu
-        while True:
-            try:#get most recent signal
-                attempt = pause_qu.get(False)
-                pause = attempt
-            except Queue2.Empty:
-                break
-        
-        if pause == 1:
+
+        if pause_signal == 1:
+            self._pause_debug("FileReader:%d || PAUSE RECEIVED" % \
+                            (self._proc_id, ))
             self.__send_ack__(pause_qu)
-            while True:
-                try:
-                    pause = pause_qu.get(False) 
-                    if pause == 0: #Unpause signal recieved
-                        self.__send_ack__(pause_qu)
-                        return
-                except Queue2.Empty:
-                    time.sleep(.5)
- 
+            self.__wait_for_unpause__(pause_qu)
+
+        elif pause_signal == 0:
+            sys.stderr.write((
+                "[Warning]: Unpause signal detected before pause in Parabam\n"+
+                "           FileReader. Processing will continue. However\n"+
+                            "there is a chance Parabam could freeze...\n"))
+            sys.stderr.flush()
+
+        elif pause_signal == 2:
+            self._pause_debug("FileReader:%d || ACK BOOMERANG" \
+                                         % (self._proc_id,))
+            pause_qu.put(pause_signal)
+
+    def __wait_for_unpause__(self, pause_qu):
+        
+        while True:
+            try:
+                new_signal = pause_qu.get(False)
+                if new_signal == 0: #Unpause signal recieved
+                    self._pause_debug("FileReader:%d || UNPAUSE RECEIVED" \
+                        % (self._proc_id,))
+                    self.__send_ack__(pause_qu)
+                    break
+
+                elif new_signal == 2:
+                    self._pause_debug("FileReader:%d || ACK BOOMERANG" \
+                                     % (self._proc_id,))
+                    pause_qu.put(new_signal)
+                    time.sleep(1)
+
+                elif new_signal == 1:
+                    sys.stderr.write((
+            "[Warning]: Pause signal detected while waiting for unpause \n"+
+            "           in Parabam FileReader. Processing will continue.\n"+
+                        "However there is a chance Parabam could freeze.\n"))
+                    sys.stderr.flush()
+                    self.__send_ack__(pause_qu)
+
+            except Queue2.Empty:
+                time.sleep(.5)
+
+
 class Leviathan(object):
     #Leviathon takes objects of file_readers and handlers and
     #chains them together.
@@ -547,7 +584,7 @@ class Leviathan(object):
                                                 default_qus,
                                                 parent,
                                                 output_paths,
-                                                pause_qus)                        
+                                                pause_qus)
         handlers = self.__get_handlers__(handlers_objects)
 
         task_n_list = self.__get_task_n__(self._constants,handlers)
@@ -571,11 +608,11 @@ class Leviathan(object):
             file_reader.join()
 
         #Inform handlers that processing has finished
-        for handler,queue in izip(handlers,handler_inqus):
+        for handler,queue in zip(handlers,handler_inqus):
             queue.put(EndProcPackage())
 
         #Destory handlers
-        for handler,queue in izip(handlers,handler_inqus):
+        for handler,queue in zip(handlers,handler_inqus):
             queue.put(DestroyPackage())
             handler.join()
 
@@ -609,7 +646,7 @@ class Leviathan(object):
 
     def __get_file_readers__(self,file_reader_bundles):
         file_readers = []
-        for bundle in file_reader_bundles: 
+        for bundle in file_reader_bundles:
             file_reader = self._FileReaderClass(**bundle)
             file_readers.append(file_reader)
         return file_readers
@@ -626,12 +663,17 @@ class Leviathan(object):
                                      pause_qus):
         bundles = []
 
-        for proc_id,pause,task_n in izip(
+        for proc_id,pause,task_n in zip(
                                 self.__proc_id_generator__(constants.reader_n),
                                 pause_qus,
                                 task_n_list):
 
-            current_bundle = {"input_path" :parent.filename,
+            try:
+                input_path = parent.filename.decode()
+            except:
+                print "I feel there's a line somewhere in the code, if we correct it we don't need to do this. Why input path is not bytes again?"
+                input_path = parent.filename
+            current_bundle = {"input_path" :input_path,
                               "proc_id" :proc_id,
                               "task_n" :task_n,
                               "outqu" :default_qus["main"],
@@ -656,7 +698,6 @@ class Leviathan(object):
 
         for handler_class in sequence_id:
             handler_args = dict(handler_bundle[handler_class])
-
             handler_args["parent_bam"] = parent_bam
             handler_args["output_paths"] = output_paths
             handler_args["constants"] = constants
@@ -666,7 +707,6 @@ class Leviathan(object):
             handler_args["inqu"] = queues[handler_args["inqu"]]
             handler_args["out_qu_dict"] = dict(\
                     [(name,queues[name]) for name in handler_args["out_qu_dict"] ])
-
             handler_inqus.append(handler_args["inqu"])
             handlers.append(handler_class(**handler_args))
 
@@ -701,38 +741,36 @@ class Interface(object):
         self.header_line = "-" * 77
 
         self.cmd_run = cmd_run
+        if cmd_run == False and temp_dir is None:
+            sys.stdout.write("***\nWarning: this is not expected, when cmd_run is False, "
+             "temp_dir should not be None. Programme may not break but not sure "
+             "if it still produces expected results.\n***\n")
+        self.control_temp_dir = False
+
         if cmd_run:
             self.__cmd_args_to_class_vars__()
+            self.__temp_dir_instalise__()
 
         else:
             self.task_size = task_size
             self.total_procs = total_procs
             self.reader_n = reader_n
             self.verbose = verbose
+            self.temp_dir = temp_dir
             self.keep_in_temp = keep_in_temp
             if not verbose:
                 self.announce = False
             else:
                 self.announce = announce
 
-        self.temp_dir = temp_dir
-        self.__temp_dir_instalise__()
-
     def get_temp_dir_path(self):
         return self.temp_dir
 
     def __temp_dir_instalise__(self):
-        if self.temp_dir is None:
-            self.temp_dir = self.__get_unique_tempdir__()
-            self.control_temp_dir = True
-        else:
-            self.temp_dir = self.temp_dir
-            self.control_temp_dir = False
-
-    def __get_unique_tempdir__(self):
+        self.control_temp_dir = True
         sanitised_name = self.instance_name.replace(" ","_")
         prefix = "%s-" % (sanitised_name,)
-        return tempfile.mkdtemp(prefix=prefix,dir=".")
+        self.temp_dir = tempfile.mkdtemp(prefix=prefix, dir=self.temp_dir)
 
     def __cmd_args_to_class_vars__(self):
         parser = self.get_parser()
@@ -741,6 +779,7 @@ class Interface(object):
         self.task_size = cmd_args.s
         self.total_procs = cmd_args.p
         self.verbose = cmd_args.v
+        self.temp_dir = cmd_args.temp_dir
         self.reader_n = cmd_args.f
     
         self.keep_in_temp = False
@@ -804,7 +843,9 @@ class Interface(object):
                  "\t0: No output [Default]\n"
                  "\t1: Total Reads Processed\n"
                  "\t2: Detailed output"))
-        
+        parser.add_argument('--temp_dir',type=str, metavar='DIR',default='/tmp'
+            ,help=('Path for %s to use for intermediate files [Default: /tmp].') % self.instance_name)
+
         return parser
 
     @abstractmethod
@@ -856,28 +897,24 @@ class EndProcPackage(Package):
 
 class ParentAlignmentFile(object):
     
-    def __init__(self, path):
+    def __init__(self,path):
+        has_index = os.path.exists(os.path.join("%s%s" % (path,".bai")))
+
         try:
-            self.load_parent_vars(path, check_header=False, check_sq=False)
+            parent = pysam.AlignmentFile(path,"rb")
+            self.filename = parent.filename
+            self.references = parent.references
+            self.header = parent.header
+            self.lengths = parent.lengths
+
         except ValueError as e:
             sys.stdout.write("[Warning]: BAM header has an error:\n")
-            sys.stdout.write("\t\t``%s``\n" % (e,))
+            sys.stdout.write("\t\t``  %s  ``\n" % (e,))
             sys.stdout.write("\tProcesseing will continue using the\n")
-            sys.stdout.write("\tcorrupted header. Consider fixing the\n")
+            sys.stdout.write("\tunverified header. Consider fixing the\n")
             sys.stdout.write("\tBAM header and restarting analysis\n")
             sys.stdout.flush()
-
-            self.load_parent_vars(path, check_header=True, check_sq=True)
-
-    def load_parent_vars(self, path, check_header, check_sq):
-        has_index = os.path.exists(os.path.join("%s%s" % (path,".bai")))
-        parent = pysam.AlignmentFile(path,"rb", 
-                                         check_header=check_header, 
-                                         check_sq=check_sq)
-        self.filename = parent.filename
-        self.references = parent.references
-        self.header = parent.header
-        self.lengths = parent.lengths
+            self.header = self.get_sanitised_header(parent)
 
         if has_index:
             self.nocoordinate = parent.nocoordinate
@@ -890,6 +927,52 @@ class ParentAlignmentFile(object):
             self.unmapped = 0
 
         parent.close()
+
+    def get_sanitised_header(self, parent):
+        new_header = {}
+        header_list = parent.text.split("\n")
+
+        for header_entry in header_list:
+
+            header_entry_type = header_entry[1:3]
+            if header_entry_type in pysam.libcalignmentfile.VALID_HEADERS:
+
+                entry_split = header_entry.split("\t")
+
+                data_type = \
+                 pysam.libcalignmentfile.VALID_HEADER_TYPES[header_entry_type]
+                if not header_entry_type in new_header:
+                    new_header[header_entry_type] = data_type()
+
+                if data_type == list:
+                    new_header[header_entry_type].append({})
+
+                for field in entry_split[1:]:
+                    self.handle_field(new_header, 
+                                      header_entry_type, 
+                                      field)      
+
+        return new_header          
+
+    def handle_field(self, new_header, header_entry_type, field):
+        if ":" in field:
+            known_fields = pysam.libcalignmentfile.KNOWN_HEADER_FIELDS
+
+            field_type, colon,field_data = field.partition(":")
+            is_valid_field = \
+                field_type in known_fields[header_entry_type]
+
+            if is_valid_field:
+                field_data_type = known_fields[header_entry_type][field_type]
+                try:
+                    if type(new_header[header_entry_type]) == dict:
+                        new_header[header_entry_type][field_type] = \
+                            field_data_type(field_data)
+                    elif type(new_header[header_entry_type]) == list:
+                        new_header[header_entry_type][-1][field_type] = \
+                            field_data_type(field_data)
+                except ValueError:
+                    pass
 
     def getrname(self,tid):
         return self.references[tid]

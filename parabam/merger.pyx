@@ -7,10 +7,13 @@ import re
 import parabam
 import pysam
 
-import Queue as Queue2
+import queue as Queue2
 
 from collections import namedtuple
-from itertools import izip
+try:
+    import itertools.izip as zip
+except ImportError:
+    pass
 
 from pprint import pprint as ppr
 
@@ -30,13 +33,12 @@ class Handler(parabam.core.Handler):
                                         out_qu_dict,report=False)
         
         self._subsets = list(constants.subsets)
+        self._parent_bam.filename = self._parent_bam.filename.decode()
 
         #CONSTANTS
         self._CLUMP_THRESH = 1000
-        self._EOF_SIGNATURE = '\x1F\x8B\x08\x04\x00\x00\x00\x00\x00\xFF'+\
-                              '\x06\x00\x42\x43\x02\x00\x1B\x00\x03\x00'+\
-                              '\x00\x00\x00\x00\x00\x00\x00\x00'
-        self._Clump = namedtuple("Clump","sequence_ids merge_tuples")                              
+        self._EOF_SIGNATURE = b'\x1F\x8B\x08\x04\x00\x00\x00\x00\x00\xFF\x06\x00\x42\x43\x02\x00\x1B\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        self._Clump = namedtuple("Clump","sequence_ids merge_tuples")
 
         #VARIABLES
 
@@ -72,7 +74,6 @@ class Handler(parabam.core.Handler):
         file_objects = {}
         output_paths = self._output_paths
 
-        file_objects = {}
         for subset in self._subsets:
             output_path = output_paths[self._parent_bam.filename][subset]
             file_objects[subset] = self.__get_bam_file_obj__(output_path)
@@ -80,11 +81,16 @@ class Handler(parabam.core.Handler):
         return file_objects
 
     def __get_bam_file_obj__(self,output_path):
-        return open(output_path,"wb")
+        return open(output_path, "wb")
 
     def __get_header_location__(self,header_path):
-        header_bytes = pysam.view(*["-Hb",header_path])
-        header_str = "".join(header_bytes).encode("hex")
+        header_bytes = pysam.view("-Hb", header_path)
+        # This is a temporary measure till we decide to migrate code to python3 completely
+        try:
+            # header_str = "".join(header_bytes).encode("hex")
+            header_str = header_bytes.encode("hex")
+        except AttributeError:
+            header_str = header_bytes.hex()
         return (len(header_str) / 2) - len(self._EOF_SIGNATURE)
 
     def __periodic_action__(self,iterations):
@@ -172,7 +178,7 @@ class Handler(parabam.core.Handler):
         count = 0
 
         for (merge_count,merge_path),sequence_id in \
-                                            izip(merge_tuples,sequence_ids):
+                                            zip(merge_tuples,sequence_ids):
             if count > self._CLUMP_THRESH:
                 new_merge_tuple.append(self.__get_clump__(\
                                             current_clump.merge_tuples))
@@ -284,7 +290,6 @@ class Handler(parabam.core.Handler):
 
             for binary_data in \
                 self.__get_binary_from_file__(merge_file):
-
                 self._out_file_objects[subset].write(binary_data)
                 self._out_file_objects[subset].flush()
         os.remove(merge_path)
@@ -307,7 +312,7 @@ class Handler(parabam.core.Handler):
             i += 1
 
     def __close_all_out_files__(self):
-        for subset,file_obj in self._out_file_objects.items():
+        for file_obj in self._out_file_objects.values():
             file_obj.write(self._EOF_SIGNATURE)
             file_obj.flush()
             file_obj.close()
