@@ -1,4 +1,3 @@
-import os
 import sys
 
 from setuptools import Extension, setup
@@ -42,7 +41,7 @@ setup(name='parabam',
   version=get_parabam_version(),
   author="JHR Farmery",
   license='GPL',
-  author_email = 'jhrf2@cam.ac.uk',
+  author_email = 'cgphelp@sanger.ac.uk',
   packages = ['parabam','parabam.command'],
   package_dir = {'parabam':'parabam','parabam.command':'parabam/command'},
   install_requires = require_modules,
