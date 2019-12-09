@@ -2,7 +2,7 @@ import os
 import time
 import datetime
 import sys
-import Queue as Queue2
+import queue as Queue2
 import gc
 import shutil
 import argparse
@@ -11,8 +11,11 @@ import signal
 import traceback
 
 import pysam
+try:
+    import itertools.izip as zip
+except ImportError:
+    pass
 
-from itertools import izip
 from multiprocessing import Process,Queue,freeze_support
 from abc import ABCMeta, abstractmethod
 
@@ -21,7 +24,7 @@ class CmdLineInterface(object):
         self.program_name = program_name
 
     def keyboard_handler(self,sig, frame):#Catch keyboard interupt and end processors
-        sys.stdout.write("\r[ERROR] %s interrupted by user" \
+        sys.stdout.write("\r[ERROR] %s interrupted by user\n" \
                                          % (self.program_name))
         sys.exit(0)
 
@@ -85,7 +88,6 @@ cdef class Handler:
 
         self._report = report
         self._stats = {}
-
         self._constants = constants
         self._verbose = constants.verbose
         self._output_paths = output_paths
@@ -209,7 +211,7 @@ cdef class Handler:
 
     def __get_first_char__(self,iterations,update_interval):
         first_chars = ["-","+","*","+"]
-        return first_chars[(iterations/update_interval) % len(first_chars)]
+        return first_chars[int(iterations/update_interval) % len(first_chars)]
 
     #This code is a little ugly. Essentially, given a results
     #dictionary, it will go through and create a sensible output
@@ -253,7 +255,7 @@ class Task(Process):
     def __init__(self, parent_bam, inqu, outqu, statusqu, task_size, constants):
         super(Task,self).__init__()
         self._parent_bam = parent_bam
-        self._parent_path = self._parent_bam.filename
+        self._parent_path = self._parent_bam.filename.decode()
         self._header = self._parent_bam.header
 
         self._outqu = outqu
@@ -332,7 +334,7 @@ class Task(Process):
     def __get_temp_path__(self,identity):
         file_name = "%s_%d_%d_%s" %\
             (identity,self.pid,self._dealt, 
-             os.path.split(self._parent_bam.filename)[1])
+             os.path.split(self._parent_path)[1])
 
         return os.path.join(self._temp_dir,file_name)
 
@@ -401,7 +403,6 @@ class FileReader(Process):
         wait_for_pause = self.__wait_for_pause__
         check_inqu = self.__check_inqu__
 
-
         if self._debug:
             parent_generator = self.__debug_generator__(parent_iter)
 
@@ -427,7 +428,6 @@ class FileReader(Process):
 
         for n in xrange(self._task_n+1):
             task_qu.put( (DestroyPackage(),-1) )
-
         time.sleep(2)
         parent_bam.close()
         task_qu.close()
@@ -468,7 +468,7 @@ class FileReader(Process):
                 if iterations % reader_n == proc_id:
                     yield iterations
                 for x in xrange(task_size):
-                    parent_iter.next()
+                    parent_iter.__next__()
                 iterations += 1
             except StopIteration:
                 break
@@ -485,7 +485,7 @@ class FileReader(Process):
                 if iterations % reader_n == proc_id:
                     yield iterations
                 for x in xrange(task_size):
-                    parent_iter.next()
+                    parent_iter.__next__()
                 iterations += 1
 
                 if iterations == 25:
@@ -584,7 +584,7 @@ class Leviathan(object):
                                                 default_qus,
                                                 parent,
                                                 output_paths,
-                                                pause_qus)                        
+                                                pause_qus)
         handlers = self.__get_handlers__(handlers_objects)
 
         task_n_list = self.__get_task_n__(self._constants,handlers)
@@ -608,11 +608,11 @@ class Leviathan(object):
             file_reader.join()
 
         #Inform handlers that processing has finished
-        for handler,queue in izip(handlers,handler_inqus):
+        for handler,queue in zip(handlers,handler_inqus):
             queue.put(EndProcPackage())
 
         #Destory handlers
-        for handler,queue in izip(handlers,handler_inqus):
+        for handler,queue in zip(handlers,handler_inqus):
             queue.put(DestroyPackage())
             handler.join()
 
@@ -646,7 +646,7 @@ class Leviathan(object):
 
     def __get_file_readers__(self,file_reader_bundles):
         file_readers = []
-        for bundle in file_reader_bundles: 
+        for bundle in file_reader_bundles:
             file_reader = self._FileReaderClass(**bundle)
             file_readers.append(file_reader)
         return file_readers
@@ -663,12 +663,17 @@ class Leviathan(object):
                                      pause_qus):
         bundles = []
 
-        for proc_id,pause,task_n in izip(
+        for proc_id,pause,task_n in zip(
                                 self.__proc_id_generator__(constants.reader_n),
                                 pause_qus,
                                 task_n_list):
 
-            current_bundle = {"input_path" :parent.filename,
+            try:
+                input_path = parent.filename.decode()
+            except:
+                print "I feel there's a line somewhere in the code, if we correct it we don't need to do this. Why input path is not bytes again?"
+                input_path = parent.filename
+            current_bundle = {"input_path" :input_path,
                               "proc_id" :proc_id,
                               "task_n" :task_n,
                               "outqu" :default_qus["main"],
@@ -693,7 +698,6 @@ class Leviathan(object):
 
         for handler_class in sequence_id:
             handler_args = dict(handler_bundle[handler_class])
-
             handler_args["parent_bam"] = parent_bam
             handler_args["output_paths"] = output_paths
             handler_args["constants"] = constants
@@ -703,7 +707,6 @@ class Leviathan(object):
             handler_args["inqu"] = queues[handler_args["inqu"]]
             handler_args["out_qu_dict"] = dict(\
                     [(name,queues[name]) for name in handler_args["out_qu_dict"] ])
-
             handler_inqus.append(handler_args["inqu"])
             handlers.append(handler_class(**handler_args))
 
@@ -738,38 +741,36 @@ class Interface(object):
         self.header_line = "-" * 77
 
         self.cmd_run = cmd_run
+        if cmd_run == False and temp_dir is None:
+            sys.stdout.write("***\nWarning: this is not expected, when cmd_run is False, "
+             "temp_dir should not be None. Programme may not break but not sure "
+             "if it still produces expected results.\n***\n")
+        self.control_temp_dir = False
+
         if cmd_run:
             self.__cmd_args_to_class_vars__()
+            self.__temp_dir_instalise__()
 
         else:
             self.task_size = task_size
             self.total_procs = total_procs
             self.reader_n = reader_n
             self.verbose = verbose
+            self.temp_dir = temp_dir
             self.keep_in_temp = keep_in_temp
             if not verbose:
                 self.announce = False
             else:
                 self.announce = announce
 
-        self.temp_dir = temp_dir
-        self.__temp_dir_instalise__()
-
     def get_temp_dir_path(self):
         return self.temp_dir
 
     def __temp_dir_instalise__(self):
-        if self.temp_dir is None:
-            self.temp_dir = self.__get_unique_tempdir__()
-            self.control_temp_dir = True
-        else:
-            self.temp_dir = self.temp_dir
-            self.control_temp_dir = False
-
-    def __get_unique_tempdir__(self):
+        self.control_temp_dir = True
         sanitised_name = self.instance_name.replace(" ","_")
         prefix = "%s-" % (sanitised_name,)
-        return tempfile.mkdtemp(prefix=prefix,dir=".")
+        self.temp_dir = tempfile.mkdtemp(prefix=prefix, dir=self.temp_dir)
 
     def __cmd_args_to_class_vars__(self):
         parser = self.get_parser()
@@ -778,6 +779,7 @@ class Interface(object):
         self.task_size = cmd_args.s
         self.total_procs = cmd_args.p
         self.verbose = cmd_args.v
+        self.temp_dir = cmd_args.temp_dir
         self.reader_n = cmd_args.f
     
         self.keep_in_temp = False
@@ -841,7 +843,9 @@ class Interface(object):
                  "\t0: No output [Default]\n"
                  "\t1: Total Reads Processed\n"
                  "\t2: Detailed output"))
-        
+        parser.add_argument('--temp_dir',type=str, metavar='DIR',default='/tmp'
+            ,help=('Path for %s to use for intermediate files [Default: /tmp].') % self.instance_name)
+
         return parser
 
     @abstractmethod

@@ -1,7 +1,6 @@
-#__init__.py
-from core import Task
-from core import PairTask
-from core import ByCoordTask
-from core import Interface
-from core import Handler
-from core import Interface
+from parabam.command.core import Task
+from parabam.command.core import PairTask
+from parabam.command.core import ByCoordTask
+from parabam.command.core import Interface
+from parabam.command.core import Handler
+from parabam.command.core import Interface

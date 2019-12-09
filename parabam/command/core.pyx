@@ -4,15 +4,11 @@ import os
 import gc
 import shutil
 import gzip
+import imp
 
 import pysam
 import parabam
 
-import imp
-
-import Queue as Queue2
-
-from itertools import izip
 from multiprocessing import Queue,Process
 from abc import ABCMeta, abstractmethod
 
@@ -44,7 +40,7 @@ class Task(parabam.core.Task):
 
     def __process_task_set__(self,iterator):
         user_rule = self._user_rule
-        next_read = iterator.next 
+        next_read = iterator.__next__
         parent_bam = self._parent_bam
         handle_output = self.__handle_rule_output__
         user_constants = self._user_constants
@@ -96,7 +92,7 @@ class PairTask(Task):
 
     def __process_task_set__(self,iterator):
         
-        next_read = iterator.next 
+        next_read = iterator.__next__
         query_loners = self.__query_loners__ 
         handle_output = self.__handle_rule_output__
 
@@ -178,7 +174,7 @@ class ByCoordTask(Task):
 
     def __process_task_set__(self,iterator):
         user_rule = self._rule
-        next_read = iterator.next 
+        next_read = iterator.__next__
         parent_bam = self._parent_bam
 
         handle_output = self.__handle_rule_output__
@@ -324,7 +320,7 @@ class ByCoordFileReader(parabam.core.FileReader):
 
         one_ahead_bam = pysam.AlignmentFile(bam_file.filename,"rb")
         one_ahead_iter = one_ahead_bam.fetch(until_eof = True)
-        one_ahead_iter.next()
+        one_ahead_iter.__next__()
 
         while True:
             try:
@@ -334,9 +330,9 @@ class ByCoordFileReader(parabam.core.FileReader):
                 observed_positions = 0
                 while True:
 
-                    current_read_pos = parent_iter.next().pos
+                    current_read_pos = parent_iter.__next__().pos
                     try:
-                        one_ahead_pos = one_ahead_iter.next().pos                        
+                        one_ahead_pos = one_ahead_iter.__next__().pos
                     except StopIteration:
                         one_ahead_pos = -1
 
@@ -476,7 +472,6 @@ class Interface(parabam.core.Interface):
             args["system_subsets"] = ["chaser"]
         else:
             args["system_subsets"] = []
-
         return args
 
     def __update_final_output_paths__(self,
@@ -484,14 +479,14 @@ class Interface(parabam.core.Interface):
                                        output_paths,
                                        final_output_paths):
         final_output_paths.update(output_paths)
-    
-    def __output_files_to_cwd__(self,final_output_paths):
+
+    def __output_files_to_a_dir__(self,final_output_paths, out_dir):
         revised_output_paths = {}
         for input_path, analyses in final_output_paths.items():
             revised_output_paths[input_path] = {}
             for analysis_name, analysis_path in analyses.items():
                 head,tail = os.path.split(analysis_path)
-                new_path = os.path.abspath(os.path.join(".",tail))
+                new_path = os.path.abspath(os.path.join(out_dir,tail))
 
                 real_path = self.__move_output_file__(analysis_path,new_path)
                 revised_output_paths[input_path][analysis_name] = real_path
@@ -564,8 +559,12 @@ class Interface(parabam.core.Interface):
             leviathon.run(input_path,output_paths)
 
         if not self.keep_in_temp:
-            final_output_paths = self.__output_files_to_cwd__(final_output_paths)
-        
+            outbam_dir = const_args.get('outbam_dir')
+            if not outbam_dir:
+                sys.stderr.write("WARNING: keep_in_temp is False, but no valid output dir is given, using current working directory. Our code should stop this happening.\n")
+                outbam_dir = '.'
+            final_output_paths = self.__output_files_to_a_dir__(final_output_paths, outbam_dir)
+
         self.__remove_empty_entries__(final_output_paths)
 
         self.__goodbye__()
@@ -586,12 +585,13 @@ class Interface(parabam.core.Interface):
             return parabam.core.FileReader
 
     def __remove_empty_entries__(self,final_output_paths):
-        for master_path,child_paths in final_output_paths.items():
-            if len(child_paths) == 0:
+        master_paths = list(final_output_paths.keys())
+        for master_path in master_paths:
+            if len(final_output_paths[master_path]) == 0:
                 del final_output_paths[master_path]
 
     def __prepare_for_pair_processing__(self,handler_bundle,handler_order,
-                                            queue_names,constants,Task):        
+                                            queue_names,constants,Task):
         handler_bundle[parabam.chaser.Handler] = {"inqu":"chaser",
                                                   "constants":constants,
                                                   "out_qu_dict":["main"],
@@ -602,7 +602,7 @@ class Interface(parabam.core.Interface):
                 handler_bundle[handler_class]["out_qu_dict"].append("chaser")
         queue_names.append("chaser")
         handler_order.insert(0,parabam.chaser.Handler)
-        constants.total_procs = constants.total_procs / 2
+        constants.total_procs = int(constants.total_procs / 2)
 
     def default_parser(self):
         parser = super(Interface,self).default_parser()

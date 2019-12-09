@@ -7,11 +7,15 @@ import gc
 import parabam
 import random
 
-import Queue as Queue2
+import queue as Queue2
 import numpy as np
 
 from parabam.core import DestroyPackage
-from itertools import izip
+try:
+    import itertools.izip as zip
+except ImportError:
+    pass
+
 from collections import Counter,namedtuple
 from multiprocessing import Queue,Process
 
@@ -79,9 +83,14 @@ class Handler(parabam.core.Handler):
                     handle_output(rule_output,pair)
 
             def __get_temp_path__(self,identity):
+                parent_bam_file_name = self._parent_bam.filename
+                try:
+                    parent_bam_file_name = parent_bam_file_name.decode()
+                except (UnicodeDecodeError, AttributeError):
+                    print "how come parent_bam_file_name is not in bytes again."
+                    pass
                 file_name = "%s_%d_%d_%s" %\
-                    (identity,self.unique,self._dealt, os.path.split(\
-                                                self._parent_bam.filename)[1])
+                    (identity,self.unique,self._dealt, os.path.split(parent_bam_file_name)[1])
                 return os.path.join(self._temp_dir,file_name)
 
         self._loner_pyramid = self.__instalise_loner_pyramid__()
@@ -421,7 +430,7 @@ class Handler(parabam.core.Handler):
                                      self._pending_jobs):
             
             pyramid_idle_counts[loner_type]=0
-            for idle_level,idle_path in izip(idle_levels,idle_paths):
+            for idle_level,idle_path in zip(idle_levels,idle_paths):
                 if not idle_success:
                     try:
                         self._loner_purgatory[loner_type].\
