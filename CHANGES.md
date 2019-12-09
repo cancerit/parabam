@@ -1,6 +1,6 @@
 # CHAGNGES
 
-## next
+## 2.3.0
 
 * Supports python3
 * Now compatible with latest version of pysam in Python3
