@@ -87,7 +87,7 @@ class Handler(parabam.core.Handler):
                 try:
                     parent_bam_file_name = parent_bam_file_name.decode()
                 except (UnicodeDecodeError, AttributeError):
-                    print "how come parent_bam_file_name is not in bytes again."
+                    print "parabam: how come parent_bam_file_name is not in bytes again."
                     pass
                 file_name = "%s_%d_%d_%s" %\
                     (identity,self.unique,self._dealt, os.path.split(parent_bam_file_name)[1])
