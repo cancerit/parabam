@@ -671,7 +671,8 @@ class Leviathan(object):
             try:
                 input_path = parent.filename.decode()
             except:
-                print "I feel there's a line somewhere in the code, if we correct it we don't need to do this. Why input path is not bytes again?"
+                # print "parabam: I feel there's a line somewhere in the code, if we correct it we don't need to do this. Why input path is not bytes again?"
+                # refer to https://github.com/cancerit/parabam/issues/6
                 input_path = parent.filename
             current_bundle = {"input_path" :input_path,
                               "proc_id" :proc_id,
