@@ -1,5 +1,9 @@
 # CHAGNGES
 
+## 2.3.1
+
+* removed some confusing output messages, which are notes for the developer.
+
 ## 2.3.0
 
 * Supports python3
