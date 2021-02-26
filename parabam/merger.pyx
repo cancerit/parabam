@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-#Once upon a time...
-
 import pdb,sys,os
 import time
 import re
@@ -14,8 +12,6 @@ try:
     import itertools.izip as zip
 except ImportError:
     pass
-
-from pprint import pprint as ppr
 
 
 class MergePackage(parabam.core.Package):
@@ -31,7 +27,7 @@ class Handler(parabam.core.Handler):
         super(Handler,self).__init__(parent_bam,output_paths,inqu,
                                         constants,pause_qus,
                                         out_qu_dict,report=False)
-        
+
         self._subsets = list(constants.subsets)
         self._parent_bam.filename = self._parent_bam.filename.decode()
 
@@ -120,7 +116,7 @@ class Handler(parabam.core.Handler):
 
     def __process_waiting_files__(self,subset,force=False):
         #TODO: Better name for valid_sequence_ids
-        valid_sequence_ids = self.__get_valid_sequence_ids__(subset) 
+        valid_sequence_ids = self.__get_valid_sequence_ids__(subset)
         if len(valid_sequence_ids) > 0:
 
             merge_tuples = [ self._waiting_files[subset][sequence_id]\
@@ -134,7 +130,7 @@ class Handler(parabam.core.Handler):
             if len(clumps) > 0:
                 for merge_count,merge_path in clumps:
                     self.__dump_to_BAM_file__(merge_path,subset)
-            
+
                 for sequence_id in clumped_sequence_ids:
                     del self._waiting_files[subset][sequence_id]
                     self._merge_stage[subset].remove(sequence_id)
@@ -169,7 +165,7 @@ class Handler(parabam.core.Handler):
         else:
             #several clumps
             return self.__create_clumps__(merge_tuples,list(sequence_ids))
-    
+
     def __create_clumps__(self,merge_tuples,sequence_ids):
         clumped_sequence_ids = []
         new_merge_tuple = []
@@ -197,7 +193,7 @@ class Handler(parabam.core.Handler):
 
     def __get_clump__(self,merge_tuples):
 
-        # This function may seem overly complicated but it is 
+        # This function may seem overly complicated but it is
         # neccessary to handle input to pysam.cat in this way.
         #
         # The function protects pysam.cat from catting too many
@@ -219,7 +215,7 @@ class Handler(parabam.core.Handler):
 
                 clump_path = self.__get_clump_path__()
                 clump_count = 0
-                
+
                 remove_paths = []
                 cat_paths = []
 
@@ -232,7 +228,7 @@ class Handler(parabam.core.Handler):
 
                     if len(cat_paths) >= 250:
                         break
-                
+
 
                 if len(cat_paths) > 1:
                     cat_paths.insert(0,"-o%s" % (clump_path,))
@@ -241,12 +237,12 @@ class Handler(parabam.core.Handler):
                     new_tuples.append((clump_count,clump_path,))
 
                 elif len(cat_paths) == 1:
-                    # Rare case where a sub-clump was comprised of empty BAM 
+                    # Rare case where a sub-clump was comprised of empty BAM
                     # files apart from one BAM file with reads
 
                     new_tuples.append((clump_count,cat_paths[0]),)
                     remove_paths.remove(cat_paths[0])
-                
+
 
                 for path in remove_paths:
                     os.remove(path)
@@ -269,7 +265,7 @@ class Handler(parabam.core.Handler):
 
             self._merge_stage[subset].sort()
             for sequence_id in self._merge_stage[subset]:
-                
+
                 if sequence_id-prev > 1:
                     break
                 else:
@@ -322,5 +318,5 @@ class Handler(parabam.core.Handler):
         for subset in self._subsets:
             self.__process_waiting_files__(subset,force=True)
         self.__close_all_out_files__()
-        
+
 #...happily ever after

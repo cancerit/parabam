@@ -44,9 +44,9 @@ class Task(parabam.core.Task):
         parent_bam = self._parent_bam
         handle_output = self.__handle_rule_output__
         user_constants = self._user_constants
-        
+
         #StopIteration caught in parabam.core.Task.run
-        for i in xrange(self._task_size):    
+        for i in xrange(self._task_size):
             read = next_read()
             rule_output = user_rule(read,user_constants,parent_bam)
             handle_output(rule_output,read)
@@ -91,9 +91,9 @@ class PairTask(Task):
         del self._loners
 
     def __process_task_set__(self,iterator):
-        
+
         next_read = iterator.__next__
-        query_loners = self.__query_loners__ 
+        query_loners = self.__query_loners__
         handle_output = self.__handle_rule_output__
 
         user_rule = self._user_rule
@@ -111,7 +111,7 @@ class PairTask(Task):
             read1,read2 = query_loners(read,loners)
 
             if read1:
-                rule_output = user_rule((read1,read2), 
+                rule_output = user_rule((read1,read2),
                                          user_constants,
                                          parent_bam)
                 handle_output(rule_output, (read1, read2,))
@@ -196,12 +196,12 @@ class ByCoordTask(Task):
 
             if task_pos == read.pos:
                 reads.append(read)
-                
+
             else:
-                rule_output = user_rule(reads,user_constants,parent_bam)        
+                rule_output = user_rule(reads,user_constants,parent_bam)
                 handle_output(rule_output,reads)
                 self._task_size += len(reads)
-                
+
                 del reads
                 reads = [read]
                 task_pos = read.pos
@@ -213,15 +213,15 @@ class ByCoordTask(Task):
 class Handler(parabam.core.Handler):
     __metaclass__=ABCMeta
 
-    def __init__(self, 
-                object parent_bam, 
+    def __init__(self,
+                object parent_bam,
                 object output_paths,
                 object inqu,
                 object constants,
                 object pause_qus,
                 dict out_qu_dict,
                 object report=True):
-        
+
         super(Handler,self).__init__(parent_bam=parent_bam,
                                      output_paths=output_paths,
                                      inqu=inqu,
@@ -233,7 +233,7 @@ class Handler(parabam.core.Handler):
 
         #Stage stores serve as a staging area
         #for packages to be sent on to subhandlers
-        self._stage_stores = {} 
+        self._stage_stores = {}
         for subset in self._system_subsets:
             self._stage_stores[subset] = []
 
@@ -247,7 +247,7 @@ class Handler(parabam.core.Handler):
 
         if "system" in results.keys():
             self.__add_system_to_stage__(results["system"])
-        
+
     def __add_system_to_stage__(self, system_results):
         for subset,(count,path) in system_results.items():
              self._stage_stores[subset].append((count,path))
@@ -266,11 +266,11 @@ class Handler(parabam.core.Handler):
             has_stage_tasks = False
             for subset,staged in self._stage_stores.items():
                 if len(staged) > 0:
-                    has_stage_tasks = True 
+                    has_stage_tasks = True
                     break
             if not has_stage_tasks:
                 self._finished = True
-                    
+
     def __update_stage_store__(self, subset):
         self._stagecount += 1
         self._stage_stores[subset] = []
@@ -281,7 +281,7 @@ class Handler(parabam.core.Handler):
             return len(self._stage_stores[subset]) > 0
         else:
             return len(self._stage_stores[subset]) > 10
-    
+
     def __add_staged_system_task__(self, results, subset_type):
         if subset_type == "chaser":
             res = parabam.chaser.ChaserResults(results=results,
@@ -315,7 +315,7 @@ class ByCoordFileReader(parabam.core.FileReader):
         cdef int task_size = self._task_size
 
         cdef int position_max = 10000
-        
+
         parent_iter = bam_file.fetch(until_eof = True)
 
         one_ahead_bam = pysam.AlignmentFile(bam_file.filename,"rb")
@@ -326,7 +326,7 @@ class ByCoordFileReader(parabam.core.FileReader):
             try:
                 if iterations % reader_n == proc_id:
                     yield iterations
-                
+
                 observed_positions = 0
                 while True:
 
@@ -378,13 +378,13 @@ class Interface(parabam.core.Interface):
         if os.getcwd not in sys.path:
             sys.path.append(os.getcwd())
 
-    
+
         # TODO: I've seen an error where a bug in the imported package
         #       causes parabam to throw this message. Needs further
         #       exploration
         try:
             module = self.__import_user_instructions__(code_path)
-        except ImportError  as e: 
+        except ImportError  as e:
             sys.stderr.write("[Error] Error importing user instruction:\n")
             sys.stderr.write("\tImportError: " + e.message + "\n")
             sys.stderr.write("\n")
@@ -399,14 +399,14 @@ class Interface(parabam.core.Interface):
 
     def __import_user_instructions__(self, code_path):
 
-        module = imp.load_source("instruc", 
+        module = imp.load_source("instruc",
                                  code_path)
         return module
 
     def __cmd_args_to_class_vars__(self):
 
         super(Interface,self).__cmd_args_to_class_vars__()
-        
+
         self.pair_process = self.cmd_args.pair
         self.coord_process = False
 
@@ -422,10 +422,10 @@ class Interface(parabam.core.Interface):
 
     @abstractmethod
     def __get_destroy_handler_order__(self):
-        '''Should return a list of hanlder classes in the 
+        '''Should return a list of hanlder classes in the
         order that they are to be destroyed by the leviathon
         all hanlder class should have a corresponding bundle entry'''
-        pass 
+        pass
 
     @abstractmethod
     def __get_output_paths__(self,input_path,final_output_paths,**kwargs):
@@ -452,13 +452,13 @@ class Interface(parabam.core.Interface):
         pass
 
     def __get_const_args__(self,**kwargs):
-        '''Any function overwriting this one MUST make a 
+        '''Any function overwriting this one MUST make a
             super call to this function.
 
             i.e args = super(<class_name>,self).__get_const_args__(**kwargs)'''
 
         args = {}
-        
+
         #Dump all non function variables from this interface into constants
         for attribute in dir(self):
             is_function = hasattr(getattr(self,attribute),"__call__")
@@ -497,7 +497,7 @@ class Interface(parabam.core.Interface):
         try:
             shutil.move(current_path,new_path)
             return new_path
-        except shutil.Error,e: 
+        except shutil.Error,e:
             root,ext = os.path.splitext( new_path )
             alternate_path = root + "_%d" % time.time() + ext
 
@@ -513,7 +513,7 @@ class Interface(parabam.core.Interface):
         for master_path,analyses in final_output_paths.items():
             for name,path in analyses.items():
                 root,name = os.path.split(path)
-                sys.stdout.write("\t\t+ %s\n" % (name,))            
+                sys.stdout.write("\t\t+ %s\n" % (name,))
 
     def run(self,input_paths,**kwargs):
         self.__introduce__()
@@ -533,7 +533,7 @@ class Interface(parabam.core.Interface):
                                                  queue_names,
                                                  constants,
                                                  task_class)
-        
+
         update_interval = self.__get_update_interval__(constants.verbose)
 
         filereader_class = self.__get_filereader_class__(**kwargs)
@@ -553,7 +553,7 @@ class Interface(parabam.core.Interface):
             self.__update_final_output_paths__(input_path,output_paths,
                                                final_output_paths)
 
-            if constants.verbose and not self.keep_in_temp: 
+            if constants.verbose and not self.keep_in_temp:
                 self.__report_file_names__(final_output_paths,input_path)
 
             leviathon.run(input_path,output_paths)
@@ -573,7 +573,7 @@ class Interface(parabam.core.Interface):
         return final_output_paths
 
     def __get_update_interval__(self,verbose):
-        if verbose == 1: 
+        if verbose == 1:
             return 8000
         else:
             return 200
@@ -602,7 +602,8 @@ class Interface(parabam.core.Interface):
                 handler_bundle[handler_class]["out_qu_dict"].append("chaser")
         queue_names.append("chaser")
         handler_order.insert(0,parabam.chaser.Handler)
-        constants.total_procs = int(constants.total_procs / 2)
+        # this will now function for 1 CPU, but note that odd numbers of cores are pointless
+        constants.total_procs = int((constants.total_procs+1) / 2)
 
     def default_parser(self):
         parser = super(Interface,self).default_parser()
@@ -610,7 +611,7 @@ class Interface(parabam.core.Interface):
         parser.add_argument('--rule','-i',metavar='RULE',required=True
             ,help='The file containing the rule, written in python,\n'\
             'that we wish to apply to the input BAM.')
-        parser.add_argument('--input','-b',metavar='INPUT', 
+        parser.add_argument('--input','-b',metavar='INPUT',
                             nargs='+',required=True
             ,help='The file(s) we wish to operate on.\n'\
             ' Multiple entries should be separated by a single space')
@@ -633,7 +634,7 @@ class Interface(parabam.core.Interface):
             help="parabam will not process reads marked duplicate.")
 
         return parser
-        
+
     @abstractmethod
     def get_parser(self):
         pass

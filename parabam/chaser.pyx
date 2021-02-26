@@ -1,4 +1,3 @@
-#Once upon a time
 import pysam
 import time
 import sys
@@ -8,9 +7,8 @@ import parabam
 import random
 
 import queue as Queue2
-import numpy as np
 
-from parabam.core import DestroyPackage
+from parabam.core import DestroyPackage, get_rb_alignment_file
 try:
     import itertools.izip as zip
 except ImportError:
@@ -38,7 +36,7 @@ class MatchMakerResults(ChaserResults):
 class JobPackage(object):
     def __init__(self,paths,loner_type,level,fragment_leftovers=False):
         self.paths = paths
-        self.loner_type = loner_type 
+        self.loner_type = loner_type
         self.level = level
         self.fragment_leftovers = fragment_leftovers
 
@@ -54,7 +52,7 @@ class Handler(parabam.core.Handler):
                                      constants=constants,
                                      pause_qus=pause_qus,
                                      out_qu_dict=out_qu_dict,report = False)
-        
+
         class RuleTask(Task):
             def __init__(self,parent_bam,constants):
                 super(RuleTask,self).__init__(parent_bam=parent_bam,
@@ -128,12 +126,12 @@ class Handler(parabam.core.Handler):
 
         self._print_chaser_debug = (lambda iterations: False)
         self._pause_debug = (lambda message: False)
-        
+
         #self._print_chaser_debug = self.__print_debug__
         #self._pause_debug = self.__pause_debug__
 
     def __pause_debug__(self, message):
-        print "PAUSE DEBUG:: ", message
+        print("PAUSE DEBUG:: ", message)
 
     def __print_debug__(self,iterations):
         if iterations % 50 == 0 or iterations == -1:
@@ -161,7 +159,7 @@ class Handler(parabam.core.Handler):
             sys.stdout.flush()
 
         if iterations % 2500 == 0:
-            print ""
+            print("")
 
     def __create_chaser_tasks__(self,total_tasks):
         tasks = []
@@ -198,7 +196,7 @@ class Handler(parabam.core.Handler):
                 size = 0
                 uid += 1
         return chrom_bins
-           
+
     def __instalise_primary_store__(self):
         return []
 
@@ -211,7 +209,7 @@ class Handler(parabam.core.Handler):
             if not pr.is_alive():
                 pr.terminate()
                 terminated_procs.append(pr)
-        
+
         for pr in terminated_procs:
             active_tasks.remove(pr)
 
@@ -223,7 +221,7 @@ class Handler(parabam.core.Handler):
 
         return len(active_tasks)
 
-    def __new_package_action__(self,new_package,**kwargs):        
+    def __new_package_action__(self,new_package,**kwargs):
         chaser_type = new_package.chaser_type
         if chaser_type == "origin":
             self.__handle_origin_task__(new_package)
@@ -234,7 +232,7 @@ class Handler(parabam.core.Handler):
             self.__handle_primary_task__(new_package)
             self._pending_jobs -= 1
         else:
-            print "Error!"
+            print("Error!")
 
     def __handle_origin_task__(self,new_package):
         for loner_count,path in new_package.results:
@@ -242,7 +240,7 @@ class Handler(parabam.core.Handler):
                 os.remove(path)
             else:
                 self._total_loners += loner_count
-                self._primary_store.append(path) 
+                self._primary_store.append(path)
 
     def __handle_match_maker__(self,new_package):
         loner_type = new_package.loner_type
@@ -256,10 +254,10 @@ class Handler(parabam.core.Handler):
         else:
 
             #this number is by pairs to get read num we times 2
-            self._rescued["total"] += (new_package.rescued*2)  
+            self._rescued["total"] += (new_package.rescued*2)
             if new_package.results: #This ensures that there are leftover loners
                 self._pyramid_idle_counts[loner_type] = 0
-                
+
                 try:
                     pyramid = self._loner_pyramid[loner_type]
                 except KeyError:
@@ -289,8 +287,8 @@ class Handler(parabam.core.Handler):
             self._primary_store = []
             gc.collect()
             time.sleep(1)
-          
-    def __start_primary_task__(self):        
+
+    def __start_primary_task__(self):
         self.__start_job__(self._primary_store,"Primary",-1)
 
     def __start_matchmaker_task__(self,paths,loner_type,level):
@@ -387,7 +385,7 @@ class Handler(parabam.core.Handler):
             idle_threshold = 200
             required_paths = 1
 
-        pyramid_idle_counts = self._pyramid_idle_counts 
+        pyramid_idle_counts = self._pyramid_idle_counts
 
         for loner_type,pyramid in self._loner_pyramid.items():
             for i,sub_pyramid in enumerate(reversed(pyramid)):
@@ -424,12 +422,12 @@ class Handler(parabam.core.Handler):
         idle_success,idle_paths,idle_levels = \
                             self.__idle_routine__(pyramid,loner_type)
 
-        # Delete after idle success or when 
+        # Delete after idle success or when
         # processing has finished and idle fails
-        if self.__clear_subpyramid__(idle_success, 
+        if self.__clear_subpyramid__(idle_success,
                                      self._destroy,
                                      self._pending_jobs):
-            
+
             pyramid_idle_counts[loner_type]=0
             for idle_level,idle_path in zip(idle_levels,idle_paths):
                 if not idle_success:
@@ -439,7 +437,7 @@ class Handler(parabam.core.Handler):
                     except KeyError:
                         self._loner_purgatory[loner_type] = [idle_path]
                 self.__remove_from_pyramid__(loner_type,idle_level,idle_path)
-                    
+
         del idle_paths,idle_levels
 
     def __finish_test__(self):
@@ -468,7 +466,7 @@ class Handler(parabam.core.Handler):
     def __add_post_destory_chaser_tasks__(self):
         if self._destroy and not self._post_destroy_tasks_added:
             self._post_destroy_tasks_added = True
-            
+
             self._max_jobs = self._max_jobs * 2
             post_destroy_tasks = self.__create_chaser_tasks__(\
                                                 self._constants.total_procs)
@@ -521,11 +519,11 @@ class Handler(parabam.core.Handler):
         task_size = self.__get_task_size__(level,loner_type)
         if len(sub_pyramid) >= task_size:
             if "XX" in loner_type and not self._destroy:
-                return sub_pyramid[:task_size] 
+                return sub_pyramid[:task_size]
             else:
                 return random.sample(sub_pyramid,task_size)
         return []
-    
+
     def __tidy_pyramid__(self):
         reads_found = self.__wait_for_remaining_jobs__()
 
@@ -585,7 +583,7 @@ class Handler(parabam.core.Handler):
                 return True
             else:
                 #Tasks still running. Don't clear
-                return False 
+                return False
         else:
             #Idle task not sent, don't clear pyramid
             return False
@@ -634,7 +632,7 @@ class Handler(parabam.core.Handler):
         self._chaser_qu.close()
         del self._chaser_qu
         del self._chaser_tasks
-        
+
         if self._constants.verbose:
             remaining_reads = self._total_loners - self._rescued["total"]
 
@@ -673,7 +671,7 @@ class Handler(parabam.core.Handler):
             self._post_destroy_count += 1
 
 class ChaserTask(Process):
-    def __init__(self,object constants,object inqu, object outqu, 
+    def __init__(self,object constants,object inqu, object outqu,
                       int max_reads, dict child_pack):
         super(ChaserTask,self).__init__()
         self._constants = constants
@@ -708,7 +706,7 @@ class ChaserTask(Process):
 
                 elif type(package) == DestroyPackage:
                     break
-                
+
                 time.sleep(0.005)
 
             except Queue2.Empty:
@@ -739,7 +737,7 @@ class PrimaryHandler(ChaserHandler):
         self.match_handler = MatchMakerHandler(constants,
                                                max_reads,
                                                child_pack,pid)
-        
+
     def run(self,unsorted_paths):
         #speedup
         write_loner = self.__write_loner__
@@ -753,7 +751,7 @@ class PrimaryHandler(ChaserHandler):
         chrom_bins = self._child_pack["chrom_bins"]
 
         for read in self.__read_generator__(unsorted_paths):
-            
+
             loner_type = self.__get_loner_type__(read,chrom_bins)
             loner_total += 1
             write_loner(loner_holder,loner_file_counts,loner_type,read)
@@ -766,7 +764,7 @@ class PrimaryHandler(ChaserHandler):
                 if loner_type == "NP":
                     matchmaker_result = \
                         self.__handle_unpaired_reads__(loner_type, path)
-                else:                    
+                else:
                     matchmaker_result = \
                         self.__start_matchmaker_task__([path],loner_type,-1)
 
@@ -778,7 +776,7 @@ class PrimaryHandler(ChaserHandler):
     def __handle_unpaired_reads__(self, loner_type, path):
         read_count = 0
 
-        bam_file = pysam.AlignmentFile(path, "rb")
+        bam_file = get_rb_alignment_file(path)
         for r in bam_file.fetch(until_eof=True):
             read_count += 1
         bam_file.close()
@@ -793,10 +791,10 @@ class PrimaryHandler(ChaserHandler):
     def __start_matchmaker_task__(self,paths,loner_type,level):
         return self.match_handler.run(paths,loner_type,
                                       level,fragment_leftovers=False)
-        
+
     def __read_generator__(self,unsorted_paths):
         for path in unsorted_paths:
-            loner_object = pysam.AlignmentFile(path,"rb")
+            loner_object = get_rb_alignment_file(path)
             for read in loner_object.fetch(until_eof=True):
                 yield read
             loner_object.close()
@@ -819,14 +817,14 @@ class PrimaryHandler(ChaserHandler):
         elif not read.is_unmapped and not read.mate_is_unmapped:
             loner_type = self.__get_reference_id_name__(read,bins)
         elif read.is_unmapped and read.mate_is_unmapped:
-            #both unmapped 
+            #both unmapped
             loner_type = "UU"
         else:
             #one unmapped read, one mapped read
             loner_type = "UM"
 
         return loner_type
-            
+
     def __get_loner_holder__(self):
         holder = {}
         return holder
@@ -840,21 +838,21 @@ class PrimaryHandler(ChaserHandler):
         try:
             loner_path = loner_objects[loner_type][-1].filename
             #Ensure fewer reads than max
-            if loner_file_counts[loner_path] == ((self._max_reads / 2) - 1): 
+            if loner_file_counts[loner_path] == ((self._max_reads / 2) - 1):
                 new_bam_object = self.__get_loner_object__(\
                                     loner_type,len(loner_objects[loner_type]))
                 loner_objects[loner_type][-1].close()
-                
-                loner_objects[loner_type].append(new_bam_object) 
+
+                loner_objects[loner_type].append(new_bam_object)
         except KeyError:
             new_bam_object = self.__get_loner_object__(loner_type,0)
             loner_path = new_bam_object.filename
             loner_objects[loner_type] = [new_bam_object]
-        
+
         loner_file_counts[loner_path] += 1
         loner_objects[loner_type][-1].write(read)
 
-    def __get_paths_and_close__(self,loner_holder):   
+    def __get_paths_and_close__(self,loner_holder):
         paths = {}
         for loner_type,loner_objects in loner_holder.items():
             paths[loner_type] = []
@@ -873,7 +871,7 @@ class MatchMakerHandler(ChaserHandler):
     def run(self,loner_paths,loner_type,level,fragment_leftovers):
 
         loner_info = self.LonerInfo(loner_paths,level,loner_type)
-        
+
         loner_path = self.__get_loner_temp_path__(\
                                     loner_info.loner_type,loner_info.level+1)
         loner_object = self.__get_loner_object__(loner_path)
@@ -914,7 +912,7 @@ class MatchMakerHandler(ChaserHandler):
         if len(send_pairs) > 0:
             rescued += self.__launch_child_task__(send_pairs)
 
-        del read_pairs   
+        del read_pairs
         del pairs
 
         gc.collect()
@@ -929,7 +927,7 @@ class MatchMakerHandler(ChaserHandler):
         if len(leftover_paths) > 0:
             for leftover_path in leftover_paths:
                 return_paths.append((loner_info.level,leftover_path))
- 
+
         loner_pack = MatchMakerResults(loner_type=loner_info.loner_type,
                                        results=return_paths,
                                        level=loner_info.level+1,
@@ -962,14 +960,14 @@ class MatchMakerHandler(ChaserHandler):
 
         count_limit = False
         for path in loner_info.paths:
-            loner_object = pysam.AlignmentFile(path,"rb")
+            loner_object = get_rb_alignment_file(path)
             bam_iterator = loner_object.fetch(until_eof=True)
-           
+
             for i,read in enumerate(bam_iterator):
                 yield read
                 if i == count:
                     count_limit = True
-                    break 
+                    break
 
             if second_pass:
                 if count_limit:
@@ -993,13 +991,13 @@ class MatchMakerHandler(ChaserHandler):
             if fragment_leftovers and\
                leftover_count > 0 and\
                leftover_count % 25000 == 0:
-                
+
                 self.__add_to_leftover_paths__(leftover_file,
                                                leftover_paths)
 
                 leftover_file = self.__get_leftover_object__(\
                                         loner_info,len(leftover_paths))
- 
+
             leftover_file.write(read)
             leftover_count += 1
 

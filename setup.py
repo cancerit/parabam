@@ -17,7 +17,7 @@ ext_modules = [
   Extension("parabam.merger", ["parabam/merger.c"]),
   Extension("parabam.command.subset", ["parabam/command/subset.c"]),
   Extension("parabam.command.stat", ["parabam/command/stat.c"]),
-  Extension("parabam.command.core", ["parabam/command/core.c"])] 
+  Extension("parabam.command.core", ["parabam/command/core.c"])]
 
 class sdist(_sdist):
   def run(self):
@@ -25,7 +25,8 @@ class sdist(_sdist):
     from Cython.Build import cythonize
     cythonize(['parabam/chaser.pyx','parabam/core.pyx','parabam/merger.pyx',
       'parabam/command/core.pyx','parabam/command/stat.pyx',
-      'parabam/command/subset.pyx'])
+      'parabam/command/subset.pyx'],
+      compiler_directives={'language_level' : '3'})
     _sdist.run(self)
 
 cmdclass['sdist'] = sdist
@@ -47,6 +48,5 @@ setup(name='parabam',
   install_requires = require_modules,
   scripts = ['parabam/bin/parabam'],
   cmdclass = cmdclass,
-  ext_modules=ext_modules,
-  use_2to3=True
+  ext_modules=ext_modules
 )
