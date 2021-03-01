@@ -64,7 +64,7 @@ class CmdLineInterface(object):
                                                 % (self.program_name,))
             except BaseException as exception:
                 print(" ")
-                print("[Error] %s stopped unexpecedtly, sorry!" \
+                print("[Error] %s stopped unexpectedly, sorry!" \
                                                 % (self.program_name,))
 
                 traceback.print_exception(*sys.exc_info())
