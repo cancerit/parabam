@@ -81,13 +81,7 @@ class Handler(parabam.core.Handler):
 
     def __get_header_location__(self,header_path):
         header_bytes = pysam.view("-Hb", header_path)
-        # This is a temporary measure till we decide to migrate code to python3 completely
-        try:
-            # header_str = "".join(header_bytes).encode("hex")
-            header_str = header_bytes.encode("hex")
-        except AttributeError:
-            header_str = header_bytes.hex()
-        return (len(header_str) / 2) - len(self._EOF_SIGNATURE)
+        return len(header_bytes) - len(self._EOF_SIGNATURE)
 
     def __periodic_action__(self,iterations):
         if self._destroy:
