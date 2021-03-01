@@ -40,6 +40,7 @@ class CmdLineInterface(object):
             temp_dir = interface.get_temp_dir_path()
             if not temp_dir == "." or not temp_dir == "" or not temp_dir == "./":
                 interface.interface_exit()
+        sys.exit(1)  # any exit that is not "end of execution" should give non-zero exit code
 
     def handle(self,command_map,help_text):
         freeze_support()
