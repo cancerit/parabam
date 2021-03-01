@@ -14,6 +14,7 @@ class sdist(_sdist):
 
 setup(name='parabam',
   version='2.3.2',
+  url='https://github.com/cancerit/parabam',
   description='Parallel BAM File Analysis',
   author="JHR Farmery",
   license='GPL',

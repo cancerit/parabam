@@ -1,13 +1,6 @@
 import parabam
 import time
-import sys
 import os
-import gc
-import shutil
-
-import pprint
-
-from multiprocessing import Queue
 
 class SubsetCore(object):
 

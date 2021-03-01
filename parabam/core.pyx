@@ -738,7 +738,7 @@ class Interface(object):
                   temp_dir = None,
                   keep_in_temp = False,
                   task_size = 250000,
-                  total_procs = 8,
+                  total_procs = 4,
                   reader_n = 2,
                   verbose = False,
                   announce = False,
