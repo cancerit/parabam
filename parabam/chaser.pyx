@@ -15,10 +15,7 @@ except ImportError:
     pass
 
 from collections import Counter,namedtuple
-from multiprocessing import Queue,Process,set_start_method
-
-if __name__ == '__main__':
-    set_start_method("spawn")
+from multiprocessing import Queue,Process
 
 class ChaserResults(parabam.core.Package):
     def __init__(self,results,chaser_type):
