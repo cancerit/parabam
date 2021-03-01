@@ -3,8 +3,6 @@ import sys
 from setuptools import Extension, setup
 from setuptools.command.sdist import sdist as _sdist
 
-IS_PYTHON3 = sys.version_info.major >= 3
-
 def get_parabam_version():
     sys.path.insert(0, "parabam")
     import version
@@ -33,10 +31,6 @@ cmdclass['sdist'] = sdist
 
 require_modules = ['numpy','argparse','pysam >= 0.10.0']
 
-if not IS_PYTHON3:
-  # to use queue from the future
-  require_modules += ['future']
-
 setup(name='parabam',
   description='Parallel BAM File Analysis',
   version=get_parabam_version(),
@@ -48,5 +42,6 @@ setup(name='parabam',
   install_requires = require_modules,
   scripts = ['parabam/bin/parabam'],
   cmdclass = cmdclass,
-  ext_modules=ext_modules
+  ext_modules=ext_modules,
+  version = "2.3.2"
 )

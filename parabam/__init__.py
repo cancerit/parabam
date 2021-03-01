@@ -6,4 +6,3 @@ from parabam.command import stat
 from parabam.command import subset
 from parabam.command.subset import Subset
 from parabam.command.stat import Stat
-from parabam.version import __version__
