@@ -9,7 +9,6 @@ import imp
 import pysam
 import parabam
 
-from multiprocessing import Queue,Process
 from abc import ABCMeta, abstractmethod
 
 #TODO: error handle incorrect return from user rule
