@@ -33,14 +33,14 @@ class CmdLineInterface(object):
     def keyboard_handler(self,sig, frame):#Catch keyboard interupt and end processors
         sys.stdout.write("\r[ERROR] %s interrupted by user\n" \
                                          % (self.program_name))
-        sys.exit(0)
+        sys.exit(1)
 
-    def die_gracefully(self, interface):
+    def die_gracefully(self, interface, exit_code):
         if interface is not None:
             temp_dir = interface.get_temp_dir_path()
             if not temp_dir == "." or not temp_dir == "" or not temp_dir == "./":
                 interface.interface_exit()
-        sys.exit(1)  # any exit that is not "end of execution" should give non-zero exit code
+        sys.exit(exit_code)  # any exit that is not "end of execution" should give non-zero exit code
 
     def handle(self,command_map,help_text):
         freeze_support()
@@ -54,23 +54,26 @@ class CmdLineInterface(object):
             #Remove command from arguments.
             sys.argv = sys.argv[1:]
             interface = None
+            exit_code = 0
             try:
                 #Load the command using the command line
                 interface = command_map[command](cmd_run=True)
                 interface.run_cmd()
 
             except SystemExit:
+                exit_code = 1
                 print(" ")
                 print("[Status] %s is quitting gracefully\n" \
                                                 % (self.program_name,))
             except BaseException as exception:
+                exit_code = 1
                 print(" ")
                 print("[Error] %s stopped unexpectedly, sorry!" \
                                                 % (self.program_name,))
 
                 traceback.print_exception(*sys.exc_info())
             finally:
-                self.die_gracefully(interface)
+                self.die_gracefully(interface, exit_code)
 
         else:
             if len(sys.argv) >= 2 and sys.argv[1] not in command_map:
