@@ -1,6 +1,6 @@
 # CHAGNGES
 
-## NEXT
+## 3.0.0
 
 * Migrated fully to python3 syntax in cython
 * Multiprocessing fork is slowly being dropped:

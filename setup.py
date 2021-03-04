@@ -13,7 +13,7 @@ class sdist(_sdist):
     _sdist.run(self)
 
 setup(name='parabam',
-  version='2.3.2',
+  version='3.0.0',
   url='https://github.com/cancerit/parabam',
   description='Parallel BAM File Analysis',
   author="JHR Farmery",
