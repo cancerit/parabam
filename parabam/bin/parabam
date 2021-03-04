@@ -4,6 +4,7 @@ import sys
 import textwrap
 import signal
 import traceback
+import pkg_resources
 
 import parabam
 
@@ -13,11 +14,11 @@ def handle_input():
 				   "subset":parabam.Subset}
 
 	help_text = (textwrap.dedent('''\
-		
+
 		parabam
 		----------------------------------------------------------------
 
-		About: 
+		About:
 			Parabam - analyse bam file in parallel
 
 		Version:
@@ -30,7 +31,7 @@ def handle_input():
 			stat\t Genereate stats regarding the BAM file
 			subset\t Create a subsetted BAM file
 
-    	'''.expandtabs()) % (parabam.__version__))
+    	'''.expandtabs()) % (pkg_resources.require("parabam")[0].version))
 
 	cmd_interface = parabam.core.CmdLineInterface()
 	cmd_interface.handle(command_map,help_text)

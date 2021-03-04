@@ -33,9 +33,9 @@ Parabam is a Cython package. In order to set it up for development use, you'll n
 ```bash
 cd $PROJECTROOT
 hash virtualenv || pip3 install virtualenv
-virtualenv -p python3 env
+python3 -m venv env
 source env/bin/activate
-pip install cython  # in order to be able to compile pyx files
+pip3 install cython  # in order to be able to compile pyx files
 python setup.py sdist  # compile pyx files into c files
 python setup.py develop  # install parabam or update existing installation
 ```

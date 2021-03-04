@@ -1,7 +1,4 @@
-#Once upon a time...
-import pysam
 import parabam
-import shutil
 import time
 import sys
 import os
@@ -52,7 +49,7 @@ class StatCore(object):
 class Task(StatCore,parabam.command.Task):
 
     def __init__(self,parent_bam,inqu,outqu,statusqu,task_size,constants):
-        
+
         parabam.command.Task.__init__(self,parent_bam=parent_bam,
                                             inqu=inqu,
                                             outqu=outqu,
@@ -60,11 +57,11 @@ class Task(StatCore,parabam.command.Task):
                                             task_size=task_size,
                                             constants=constants)
         StatCore.__init__(self)
-        
+
 class PairTask(StatCore,parabam.command.PairTask):
 
     def __init__(self,parent_bam,inqu,outqu,statusqu,task_size,constants):
-        
+
         parabam.command.PairTask.__init__(self,parent_bam=parent_bam,
                                             inqu=inqu,
                                             outqu=outqu,
@@ -103,11 +100,11 @@ class Handler(parabam.command.Handler):
             data_str = \
                 self.__get_data_str_from_names__(constants.numeric_names,
                                                   self._final_structures)
-            
+
             with open(self._output_paths["global"]["stats"],"a") as out_object:
                 out_object.write("%s%s\n" % \
                     (self._parent_bam.filename.decode(),data_str))
-        
+
         #Output non global data
         for name,structure in self._final_structures.items():
             if structure.struc_type == np.ndarray or \
@@ -130,7 +127,7 @@ class UserStructure(object):
 
     def __init__(self,name,struc_type,store_method,data):
         self.struc_type = struc_type
-        self.store_method = store_method 
+        self.store_method = store_method
         self.data = data
         self.org_data = copy.copy(data)
         self.name = name
@@ -215,7 +212,7 @@ class NumericStructure(UserStructure):
         self.data += result
         del result
 
-#TODO: This mode doesn't work at all. Probably something to do with 
+#TODO: This mode doesn't work at all. Probably something to do with
 #      creating an empty clone. Counts are inflated.
 class CounterStructure(UserStructure):
     def __init__(self,name,struc_type,store_method,data):
@@ -314,7 +311,7 @@ class ArrayStructure(UserStructure):
 
         format = []
         for x in self.data[0,:]:
-            type_of_x = type(x) 
+            type_of_x = type(x)
             if type_of_x == str or type_of_x == np.string_:
                 format.append("%s")
             else:
@@ -326,7 +323,7 @@ class Stat(parabam.command.Interface):
 
     def __init__(self,**kwargs):
         super(Stat,self).__init__(instance_name = "parabam stat", **kwargs)
-    
+
     def __setup_other_cmd_args__(self):
         # Must implement this method to satisfy
         # inheritance
@@ -354,7 +351,7 @@ class Stat(parabam.command.Interface):
                   specified_outpath=None,
                   fetch_region=None,
                   **kwargs):
-                  
+
         ''' Docstring! '''
         args = dict(locals())
         del args["self"]
@@ -388,7 +385,7 @@ class Stat(parabam.command.Interface):
 
         if len(numeric_names) > 0:
             global_filename = \
-                        self.__get_global_output_path__(specified_outpath)            
+                        self.__get_global_output_path__(specified_outpath)
             self.__create_global_output_file__(global_filename,numeric_names)
 
             final_output["global"] = {"stats": global_filename}
@@ -396,7 +393,7 @@ class Stat(parabam.command.Interface):
         return final_output
 
     def __get_global_output_path__(self,specified_outpath):
-        
+
         if specified_outpath is None:
             global_filename = \
                     os.path.join(self.temp_dir,"parabam_stat_%d_%d.csv"\
@@ -420,7 +417,7 @@ class Stat(parabam.command.Interface):
                             os.path.join(".",self.temp_dir,csv_path)
 
         if "global" in final_output_paths.keys():
-            output_paths["global"] = final_output_paths["global"] 
+            output_paths["global"] = final_output_paths["global"]
         return output_paths
 
     def __get_task_class__(self,**kwargs):
@@ -459,11 +456,11 @@ class Stat(parabam.command.Interface):
         return structures
 
     def get_parser(self):
-        #argparse imported in ./interface/parabam 
+        #argparse imported in ./interface/parabam
         parser = self.default_parser()
 
         parser.add_argument('--output','-o',
-                                metavar='OUTPUT', 
+                                metavar='OUTPUT',
                                 nargs='?',
                                 required=False
         ,help="Specify a name for the output CSV file. If this argument is \n"\

@@ -1,12 +1,6 @@
-import pysam
 import parabam
 import time
-import sys
 import os
-import gc
-import shutil
-
-from multiprocessing import Queue
 
 class SubsetCore(object):
 
@@ -43,7 +37,7 @@ class SubsetCore(object):
 class Task(SubsetCore,parabam.command.Task):
 
     def __init__(self,parent_bam,inqu,outqu,statusqu,task_size,constants,**kwargs):
-        
+
         parabam.command.Task.__init__(self,parent_bam=parent_bam,
                                     inqu=inqu,
                                     outqu=outqu,
@@ -59,7 +53,7 @@ class Task(SubsetCore,parabam.command.Task):
                     self.__write_to_subset_bam__(subset, read)
         if type(rule_output) == bool:
             if rule_output:
-                self.__write_to_subset_bam__(self._constants.subsets[0],read)          
+                self.__write_to_subset_bam__(self._constants.subsets[0],read)
         elif type(rule_output) == list:
             for subset,cur_read in rule_output:
                 self.__write_to_subset_bam__(subset,cur_read)
@@ -68,7 +62,7 @@ class Task(SubsetCore,parabam.command.Task):
 
 class PairTask(SubsetCore,parabam.command.PairTask):
     def __init__(self,parent_bam,inqu,outqu,statusqu,task_size,constants):
-        
+
         parabam.command.PairTask.__init__(self,parent_bam=parent_bam,
                                                 inqu=inqu,
                                                 outqu=outqu,
@@ -84,7 +78,7 @@ class PairTask(SubsetCore,parabam.command.PairTask):
 class ByCoordTask(SubsetCore,parabam.command.ByCoordTask):
 
     def __init__(self,parent_bam,inqu,outqu,statusqu,task_size,constants,**kwargs):
-        
+
         parabam.command.ByCoordTask.__init__(self,parent_bam=parent_bam,
                                     inqu=inqu,
                                     outqu=outqu,
@@ -93,8 +87,8 @@ class ByCoordTask(SubsetCore,parabam.command.ByCoordTask):
                                     constants=constants)
         SubsetCore.__init__(self)
 
-    def __handle_rule_output__(self,rule_output,read):     
-        write_to_subset = self.__write_to_subset_bam__        
+    def __handle_rule_output__(self,rule_output,read):
+        write_to_subset = self.__write_to_subset_bam__
         for read in rule_output:
             write_to_subset(self._constants.subsets[0],read)
 
@@ -102,7 +96,7 @@ class Handler(parabam.command.Handler):
 
     def __init__(self,object parent_bam, object output_paths,object inqu,
                 object constants,object pause_qus,dict out_qu_dict):
-        
+
         super(Handler,self).__init__(parent_bam = parent_bam,
                                         output_paths = output_paths,
                                         inqu=inqu,
@@ -136,10 +130,10 @@ class Handler(parabam.command.Handler):
         #Kill the handlers handler
 
         for subset in self._subsets:
-            #merge task 
+            #merge task
             self.__add_merge_task__(self._stage_stores[subset],subset)
         self.__write_counts_csv__()
-    
+
     def __add_merge_task__(self,results,subset_type):
         res = parabam.merger.MergePackage(results=results,
                                           subset_type=subset_type,)
@@ -202,7 +196,7 @@ class Subset(parabam.command.Interface):
             fetch_region = self.cmd_args.region,
             output_counts= self.cmd_args.counts,
             ensure_unique_output = self.cmd_args.u)
-    
+
     def run(self,input_paths,
             constants,
             rule,
@@ -213,7 +207,7 @@ class Subset(parabam.command.Interface):
             **kwargs):
 
         ''' Docstring! '''
-        
+
         self.ensure_unique_output = False
 
         args = dict(locals())
@@ -233,7 +227,7 @@ class Subset(parabam.command.Interface):
         handler_bundle = {}
 
         #queues transformed by leviathon
-        handler_bundle[Handler] = {"inqu":"main", 
+        handler_bundle[Handler] = {"inqu":"main",
                                    "out_qu_dict":["merge"]}
 
         handler_bundle[parabam.merger.Handler] = {"inqu":"merge",
@@ -248,7 +242,7 @@ class Subset(parabam.command.Interface):
                              final_output_paths,
                              subsets,
                              **kwargs):
-        
+
         output_paths = {input_path:{}}
         for salt,subset in enumerate(subsets):
             output_paths[input_path][subset] =\
@@ -267,7 +261,7 @@ class Subset(parabam.command.Interface):
 
         return os.path.join(".",self.temp_dir, "%s_%s%s%s" \
                                     % (tail,subset,unique,ext))
-            
+
     def __get_task_class__(self,**kwargs):
         if self.pair_process:
             return PairTask
@@ -286,6 +280,6 @@ class Subset(parabam.command.Interface):
             help="The amount of reads in each subset will be output as"\
                     " a .CSV alongside the .BAM file.")
 
-        return parser 
+        return parser
 
 #...happily ever after
