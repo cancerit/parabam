@@ -19,6 +19,13 @@ except ImportError:
 from multiprocessing import Process,Queue,freeze_support
 from abc import ABCMeta, abstractmethod
 
+def get_rb_alignment_file(path):
+    save = pysam.set_verbosity(0)
+    af = pysam.AlignmentFile(path, "rb")
+    pysam.set_verbosity(save)
+    return af
+
+
 class CmdLineInterface(object):
     def __init__(self,program_name = "parabam"):
         self.program_name = program_name
@@ -26,54 +33,58 @@ class CmdLineInterface(object):
     def keyboard_handler(self,sig, frame):#Catch keyboard interupt and end processors
         sys.stdout.write("\r[ERROR] %s interrupted by user\n" \
                                          % (self.program_name))
-        sys.exit(0)
+        sys.exit(1)
 
-    def die_gracefully(self, interface):
+    def die_gracefully(self, interface, exit_code):
         if interface is not None:
             temp_dir = interface.get_temp_dir_path()
-            if not temp_dir == "." or not temp_dir == "" or not temp_dir == "./": 
+            if not temp_dir == "." or not temp_dir == "" or not temp_dir == "./":
                 interface.interface_exit()
+        sys.exit(exit_code)  # any exit that is not "end of execution" should give non-zero exit code
 
     def handle(self,command_map,help_text):
         freeze_support()
 
-        signal.signal(signal.SIGINT, self.keyboard_handler)     
+        signal.signal(signal.SIGINT, self.keyboard_handler)
         print_help_text = False
 
         if len(sys.argv) >= 2 and sys.argv[1] in command_map:
-            
+
             command = sys.argv[1]
             #Remove command from arguments.
-            sys.argv = sys.argv[1:] 
+            sys.argv = sys.argv[1:]
             interface = None
+            exit_code = 0
             try:
                 #Load the command using the command line
                 interface = command_map[command](cmd_run=True)
                 interface.run_cmd()
-                
+
             except SystemExit:
-                print " "
-                print "[Status] %s is quitting gracefully\n" \
-                                                % (self.program_name,)
+                exit_code = 1
+                print(" ")
+                print("[Status] %s is quitting gracefully\n" \
+                                                % (self.program_name,))
             except BaseException as exception:
-                print " "
-                print "[Error] %s stopped unexpecedtly, sorry!" \
-                                                % (self.program_name,)
+                exit_code = 1
+                print(" ")
+                print("[Error] %s stopped unexpectedly, sorry!" \
+                                                % (self.program_name,))
 
                 traceback.print_exception(*sys.exc_info())
             finally:
-                self.die_gracefully(interface)
-        
-        else: 
+                self.die_gracefully(interface, exit_code)
+
+        else:
             if len(sys.argv) >= 2 and sys.argv[1] not in command_map:
-                print "\nUnrecognised command: `%s`." % (sys.argv[1])
-                print "Refer to manual below for a list of valid commands\n"
-            print help_text
+                print("\nUnrecognised command: `%s`." % (sys.argv[1]))
+                print("Refer to manual below for a list of valid commands\n")
+            print(help_text)
 
 cdef class Handler:
 
     def __init__(self,
-                  object parent_bam, 
+                  object parent_bam,
                   object output_paths,
                   object inqu,
                   object constants,
@@ -165,9 +176,9 @@ cdef class Handler:
                     self._destroy = True
                 elif type(package) == EndProcPackage:
                     self._processing = False
-            
+
             del packages
-            if iterations % periodic_interval == 0: 
+            if iterations % periodic_interval == 0:
                 self.__periodic_action__(iterations)
 
             output_logic(start_time,iterations,update_interval)
@@ -236,7 +247,7 @@ cdef class Handler:
 
     def __periodic_action__(self,iterations):
         #Overwrite with something that needs
-        #to be done occasionally.       
+        #to be done occasionally.
         pass
 
     def __new_package_action__(self,new_package,**kwargs):
@@ -264,13 +275,12 @@ class Task(Process):
 
         self._task_size = task_size
         self._temp_dir = constants.temp_dir
-        self._constants = constants 
-        
+        self._constants = constants
+
         self._dealt = 0
 
     def run(self):
-
-        bamfile = pysam.AlignmentFile(self._parent_path,"rb")
+        bamfile = get_rb_alignment_file(self._parent_path)
         iterator = bamfile.fetch(until_eof=True)
         generate_results = self.__generate_results__
 
@@ -284,17 +294,17 @@ class Task(Process):
                     del bamfile
                     break
 
-                seek = package                
+                seek = package
                 bamfile.seek(seek)
                 time.sleep(.01)
 
                 results = generate_results(iterator)
-                
+
                 self._dealt += 1
                 time.sleep(0.005)
 
                 self._outqu.put(Package(results=results,sequence_id=sequence_id))
-                self._statusqu.put(1) 
+                self._statusqu.put(1)
 
             except Queue2.Empty:
                 time.sleep(5)
@@ -316,8 +326,8 @@ class Task(Process):
 
     def __handle_stop_iteration__(self,seek,bamfile,iterator):
         results = self.__get_results__()
-         
-        cdef int count = 0 
+
+        cdef int count = 0
         bamfile.seek(seek)
         try: #Count the amount of reads until end of file
             for read in iterator:
@@ -333,7 +343,7 @@ class Task(Process):
 
     def __get_temp_path__(self,identity):
         file_name = "%s_%d_%d_%s" %\
-            (identity,self.pid,self._dealt, 
+            (identity,self.pid,self._dealt,
              os.path.split(self._parent_path)[1])
 
         return os.path.join(self._temp_dir,file_name)
@@ -360,12 +370,12 @@ class FileReader(Process):
     def __init__(self,str input_path,int proc_id,object outqu,
                  int task_n,object constants,object Task,
                  object pause_qu,object inqu = None):
-        
+
         super(FileReader,self).__init__()
 
         self._input_path = input_path
         self._proc_id = proc_id
-        
+
         self._outqu = outqu
         self._pause_qu = pause_qu
 
@@ -390,14 +400,14 @@ class FileReader(Process):
         #self._pause_debug = self.__pause_debug__
 
     def __pause_debug__(self, message):
-        print "PAUSE DEBUG:: ", message
+        print("PAUSE DEBUG:: ", message)
 
-    #Find data pertaining to assocd and all reads 
+    #Find data pertaining to assocd and all reads
     #and divide pertaining to the chromosome that it is aligned to
     def run(self):
 
         parent_bam_mem_obj = ParentAlignmentFile(self._input_path)
-        parent_bam = pysam.AlignmentFile(self._input_path,"rb")
+        parent_bam = get_rb_alignment_file(self._input_path)
         parent_iter = self.__get_parent_iter__(parent_bam)
         parent_generator = self.__bam_generator__(parent_iter)
         wait_for_pause = self.__wait_for_pause__
@@ -480,7 +490,7 @@ class FileReader(Process):
         cdef int iterations = 0
         cdef int task_size = self._task_size
 
-        while True:            
+        while True:
             try:
                 if iterations % reader_n == proc_id:
                     yield iterations
@@ -528,7 +538,7 @@ class FileReader(Process):
             pause_qu.put(pause_signal)
 
     def __wait_for_unpause__(self, pause_qu):
-        
+
         while True:
             try:
                 new_signal = pause_qu.get(False)
@@ -570,11 +580,11 @@ class Leviathan(object):
         self._queue_names = queue_names
         self._Task = Task
         self._FileReaderClass = FileReaderClass
-    
+
     def run(self,input_path,output_paths):
         parent = ParentAlignmentFile(input_path)
 
-        default_qus = self.__create_queues__(self._queue_names) 
+        default_qus = self.__create_queues__(self._queue_names)
         pause_qus = self.__create_pause_qus__(self._constants.reader_n)
 
         handlers_objects,handler_inqus = \
@@ -642,7 +652,7 @@ class Leviathan(object):
         if any([ n == 0 for n in task_n_list]):
             task_n_list = [1] * reader_n
 
-        return task_n_list 
+        return task_n_list
 
     def __get_file_readers__(self,file_reader_bundles):
         file_readers = []
@@ -655,11 +665,11 @@ class Leviathan(object):
         for i in reversed(xrange(reader_n)):
             yield i
 
-    def __get_file_reader_bundles__(self, 
-                                     default_qus, 
-                                     parent, 
-                                     task_n_list, 
-                                     constants, 
+    def __get_file_reader_bundles__(self,
+                                     default_qus,
+                                     parent,
+                                     task_n_list,
+                                     constants,
                                      pause_qus):
         bundles = []
 
@@ -685,7 +695,7 @@ class Leviathan(object):
             bundles.append(current_bundle)
 
         return bundles
- 
+
     def __create_queues__(self,queue_names):
         queues = {}
         for name in queue_names:
@@ -732,7 +742,7 @@ class Interface(object):
                   temp_dir = None,
                   keep_in_temp = False,
                   task_size = 250000,
-                  total_procs = 8,
+                  total_procs = 4,
                   reader_n = 2,
                   verbose = False,
                   announce = False,
@@ -779,10 +789,12 @@ class Interface(object):
 
         self.task_size = cmd_args.s
         self.total_procs = cmd_args.p
+        if self.total_procs % 2 == 1:
+            print("WARNING: Execution with odd number of processes is not recommended", file=sys.stderr)
         self.verbose = cmd_args.v
         self.temp_dir = cmd_args.temp_dir
         self.reader_n = cmd_args.f
-    
+
         self.keep_in_temp = False
         self.announce = int(self.verbose) > 0
 
@@ -797,7 +809,7 @@ class Interface(object):
             sys.stdout.write(intro+"\n")
             sys.stdout.write(underline+"\n\n")
             sys.stdout.flush()
-    
+
     def __get_date_time__(self):
         return datetime.datetime.fromtimestamp(
                             time.time()).strftime('%Y-%m-%d %H:%M:%S')
@@ -828,7 +840,7 @@ class Interface(object):
                     formatter_class=argparse.RawTextHelpFormatter)
 
         parser.add_argument('-p',type=int,nargs='?',default=4
-            ,help=('The maximum amount of processes you wish\n' 
+            ,help=('The maximum amount of processes you wish\n'
                    '%s to use. This should be less \n'
                    'than or equal to the amount of processor\n'
                    'cores in your machine [Default: 4].') % self.instance_name)
@@ -852,7 +864,7 @@ class Interface(object):
     @abstractmethod
     def run_cmd(self):
         #This is usualy just a function that
-        #takes an argparse parser and turns 
+        #takes an argparse parser and turns
         #passes the functions to the run function
         pass
 
@@ -872,7 +884,7 @@ class ParabamParser(argparse.ArgumentParser):
         sys.exit(2)
 
 class Constants(object):
-    
+
     def __init__(self, **kwargs):
 
         for key, val in kwargs.items():
@@ -897,12 +909,12 @@ class EndProcPackage(Package):
         self.destroy = False
 
 class ParentAlignmentFile(object):
-    
+
     def __init__(self,path):
         has_index = os.path.exists(os.path.join("%s%s" % (path,".bai")))
 
         try:
-            parent = pysam.AlignmentFile(path,"rb")
+            parent = get_rb_alignment_file(path)
             self.filename = parent.filename
             self.references = parent.references
             self.header = parent.header
@@ -949,11 +961,11 @@ class ParentAlignmentFile(object):
                     new_header[header_entry_type].append({})
 
                 for field in entry_split[1:]:
-                    self.handle_field(new_header, 
-                                      header_entry_type, 
-                                      field)      
+                    self.handle_field(new_header,
+                                      header_entry_type,
+                                      field)
 
-        return new_header          
+        return new_header
 
     def handle_field(self, new_header, header_entry_type, field):
         if ":" in field:
