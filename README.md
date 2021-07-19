@@ -1,19 +1,27 @@
 # Parabam
 
-Parabam is a tool for processing sequencing files in parralell. It uses pythons native multiprocessing framework to apply a user defined rule on an input file.
+Parabam is a tool for processing sequencing files in parallel. It uses pythons native multiprocessing framework to apply a user defined rule on an input file.
 
 Full documentation can be found [here](http://parabam.readthedocs.org/).
 
 ## INSTALL
 
-Installation is via `pip`.  Simply execute with the path to the packaged distribution:
+Installation is via `pip`.
 
 ```bash
-VERSION=X.X.X
-pip install https://github.com/cancerit/parabam/releases/download/$VERSION/parabam-${VERSION}.tar.gz
+# current release
+pip install parabam
+# specific version
+pip install parabam==$VERSION
 ```
 
-**Note:** `pip install parabam` will only work for versions pre `2.3.0`, as `2.3.0` and later are not published on PyPI.
+**Note:** `pip install parabam` does not work for `2.3.1`/`3.0.0` use the following:
+
+```bash
+export VERSION=X.X.X
+# directly from GitHub (incase pypi release hasn't been performed)
+pip install https://github.com/cancerit/parabam/releases/download/$VERSION/parabam-${VERSION}.tar.gz
+```
 
 ### Package Dependancies
 
