@@ -21,7 +21,7 @@ setup(name='parabam',
   author_email = 'cgphelp@sanger.ac.uk',
   packages = ['parabam','parabam.command'],
   package_dir = {'parabam':'parabam','parabam.command':'parabam/command'},
-  install_requires = ['numpy','argparse','pysam >= 0.10.0'],
+  install_requires = ['numpy','pysam >= 0.10.0'],
   scripts = ['parabam/bin/parabam'],
   cmdclass = {'sdist': sdist},
   ext_modules=[
