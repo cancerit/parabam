@@ -1,0 +1,4 @@
+include parabam/**/*.c
+include parabam/**/*.pyx
+include README.md
+include LICENSE
