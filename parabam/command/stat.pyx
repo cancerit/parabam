@@ -312,7 +312,7 @@ class ArrayStructure(UserStructure):
         format = []
         for x in self.data[0,:]:
             type_of_x = type(x)
-            if type_of_x == str or type_of_x == np.string_:
+            if type_of_x == str or type_of_x == np.bytes_:
                 format.append("%s")
             else:
                 format.append("%.5f")
