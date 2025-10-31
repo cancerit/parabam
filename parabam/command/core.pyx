@@ -4,7 +4,7 @@ import os
 import gc
 import shutil
 import gzip
-import imp
+import importlib.util
 
 import pysam
 import parabam
@@ -398,8 +398,10 @@ class Interface(parabam.core.Interface):
 
     def __import_user_instructions__(self, code_path):
 
-        module = imp.load_source("instruc",
-                                 code_path)
+        spec = importlib.util.spec_from_file_location(name="instruc",
+                                                      location=code_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
         return module
 
     def __cmd_args_to_class_vars__(self):

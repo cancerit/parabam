@@ -1,0 +1,111 @@
+name: Test Parabam Stat
+
+on:
+  push:
+    branches: [ develop, master ]
+  pull_request:
+    branches: [ develop, master ]
+  workflow_dispatch:
+
+jobs:
+  test-stat:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+      fail-fast: false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y samtools
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools wheel Cython>=3.0.0
+        pip install numpy pysam>=0.10.0
+
+    - name: Build and install parabam
+      run: |
+        pip install -e .
+
+    - name: Verify installation
+      run: |
+        parabam --help
+
+    - name: Run stat command
+      run: |
+        parabam stat -v 1 --rule test-data/get_blueprint.py --input test-data/test.bam --output test.csv
+
+    - name: Verify output files exist
+      run: |
+        if [ ! -f test.csv ]; then
+          echo "Error: test.csv was not created"
+          exit 1
+        fi
+        if [ ! -f test_quality_counts.csv ]; then
+          echo "Error: test_quality_counts.csv was not created"
+          exit 1
+        fi
+        echo "Both output files created successfully"
+
+    - name: Display generated files
+      run: |
+        echo "=== Generated test.csv ==="
+        cat test.csv
+        echo ""
+        echo "=== Generated test_quality_counts.csv ==="
+        cat test_quality_counts.csv
+
+    - name: Display expected files
+      run: |
+        echo "=== Expected test-data/test.csv ==="
+        cat test-data/test.csv
+        echo ""
+        echo "=== Expected test-data/test_quality_counts.csv ==="
+        cat test-data/test_quality_counts.csv
+
+    - name: Compare test.csv with expected output
+      run: |
+        echo "Comparing test.csv with test-data/test.csv"
+        if diff -w test.csv test-data/test.csv; then
+          echo "✓ test.csv matches expected output"
+        else
+          echo "✗ test.csv differs from expected output"
+          echo "Differences:"
+          diff -w test.csv test-data/test.csv || true
+          exit 1
+        fi
+
+    - name: Compare test_quality_counts.csv with expected output
+      run: |
+        echo "Comparing test_quality_counts.csv with test-data/test_quality_counts.csv"
+        # Sort both files before comparing (dict order might vary)
+        sort test_quality_counts.csv > test_quality_counts_sorted.csv
+        sort test-data/test_quality_counts.csv > test_quality_counts_expected_sorted.csv
+
+        if diff -w test_quality_counts_sorted.csv test_quality_counts_expected_sorted.csv; then
+          echo "✓ test_quality_counts.csv matches expected output"
+        else
+          echo "✗ test_quality_counts.csv differs from expected output"
+          echo "Differences:"
+          diff -w test_quality_counts_sorted.csv test_quality_counts_expected_sorted.csv || true
+          exit 1
+        fi
+
+    - name: Display test summary
+      if: always()
+      run: |
+        echo "=== Test Summary ==="
+        echo "Python version: ${{ matrix.python-version }}"
+        echo "Status: ${{ job.status }}"

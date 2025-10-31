@@ -4,7 +4,7 @@ import sys
 import textwrap
 import signal
 import traceback
-import pkg_resources
+from importlib.metadata import version
 
 import parabam
 
@@ -31,7 +31,7 @@ def handle_input():
 			stat\t Genereate stats regarding the BAM file
 			subset\t Create a subsetted BAM file
 
-    	'''.expandtabs()) % (pkg_resources.require("parabam")[0].version))
+    	'''.expandtabs()) % (version("parabam")))
 
 	cmd_interface = parabam.core.CmdLineInterface()
 	cmd_interface.handle(command_map,help_text)

@@ -1,0 +1,34 @@
+[build-system]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+    "Cython>=3.0.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "parabam"
+version = "3.0.1"
+description = "Parallel BAM File Analysis"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "JHR Farmery", email = "cgphelp@sanger.ac.uk" }]
+requires-python = ">3.2"
+dependencies = [
+  "numpy",
+  "pysam>=0.10.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/cancerit/parabam"
+
+[project.scripts]
+parabam = "parabam.bin.parabam:handle_input"
+
+[tool.setuptools]
+packages = ["parabam", "parabam.command", "parabam.bin"]
+
+[tool.setuptools.package-dir]
+parabam = "parabam"
+"parabam.command" = "parabam/command"
+"parabam.bin" = "parabam/bin"
